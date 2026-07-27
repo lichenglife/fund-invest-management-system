@@ -1,0 +1,17 @@
+{
+  "total": 100,
+  "correct": 100,
+  "exact": 100,
+  "lenient": 0,
+  "clarify_ok": 15,
+  "accuracy_strict": 1.0,
+  "accuracy_lenient": 1.0,
+  "by_category": {
+    "A": 1.0,
+    "B": 1.0,
+    "C": 1.0,
+    "D": 1.0,
+    "E": 1.0
+  },
+  "fails": []
+}

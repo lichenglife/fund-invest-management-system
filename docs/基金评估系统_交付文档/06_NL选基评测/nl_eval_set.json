@@ -1,0 +1,1598 @@
+[
+  {
+    "id": 1,
+    "category": "A",
+    "question": "近三年混合基金里回撤小于15%、收益排名前20%的",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 2,
+    "category": "A",
+    "question": "近一年股票型基金中收益高、规模适中的",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 3,
+    "category": "A",
+    "question": "近三年回撤控制在10%以内、年化收益8%以上的混合基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "max_drawdown_le": 0.1,
+        "annual_return_ge": 0.08
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 4,
+    "category": "A",
+    "question": "成立以来波动小、夏普大于1的宽基指数基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "since",
+      "factors": {
+        "volatility_le": 0.1,
+        "sharpe_ge": 1.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 5,
+    "category": "A",
+    "question": "近五年收益靠前、最大回撤不超20%的主动股混",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "5y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 6,
+    "category": "A",
+    "question": "近一年规模在10到50亿、收益排名前30%的混合基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "scale_min": 10,
+        "scale_max": 50,
+        "return_rank_ge": 0.3
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 7,
+    "category": "A",
+    "question": "近三年夏普高、回撤小的债券基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "3y",
+      "factors": {
+        "sharpe_ge": 1.0,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 8,
+    "category": "A",
+    "question": "今年以来收益好、波动低的股票基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "ytd",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 9,
+    "category": "A",
+    "question": "近三年规模适中、回撤低于12%的沪深300指数基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "3y",
+      "factors": {
+        "scale_min": 2,
+        "scale_max": 50,
+        "max_drawdown_le": 0.12
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 10,
+    "category": "A",
+    "question": "近一年收益排名前10%、最大回撤15%以内的主动混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.1,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 11,
+    "category": "A",
+    "question": "成立以来年化收益10%以上、回撤不超25%的混合偏股",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "since",
+      "factors": {
+        "annual_return_ge": 0.1,
+        "max_drawdown_le": 0.25
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 12,
+    "category": "A",
+    "question": "近三年波动平稳、收益靠前的债券型",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "3y",
+      "factors": {
+        "volatility_le": 0.1,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 13,
+    "category": "A",
+    "question": "近五年规模大、夏普大于1.2的宽基ETF",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": "5y",
+      "factors": {
+        "scale_min": 50,
+        "sharpe_ge": 1.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 14,
+    "category": "A",
+    "question": "近一年回撤小、收益高的QDII基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": "1y",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 15,
+    "category": "A",
+    "question": "近三年收益稳定、最大回撤10%以内的混合基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "volatility_le": 0.1,
+        "max_drawdown_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 16,
+    "category": "A",
+    "question": "近一年规模在5到20亿、夏普高、回撤低的股票基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "1y",
+      "factors": {
+        "scale_min": 5,
+        "scale_max": 20,
+        "sharpe_ge": 1.0,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 17,
+    "category": "A",
+    "question": "近三年收益排名前25%、波动小的指数基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.25,
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 18,
+    "category": "A",
+    "question": "成立以来回撤控制好的混合基金（不超过15%）",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "since",
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 19,
+    "category": "A",
+    "question": "近五年收益高、规模适中、夏普大于1的主动股票",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "5y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "scale_min": 2,
+        "scale_max": 50,
+        "sharpe_ge": 1.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 20,
+    "category": "A",
+    "question": "近一年最大回撤8%以内、年化收益6%以上的债基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "1y",
+      "factors": {
+        "max_drawdown_le": 0.08,
+        "annual_return_ge": 0.06
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 21,
+    "category": "A",
+    "question": "近三年规模百亿以上、收益靠前的宽基指数",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "3y",
+      "factors": {
+        "scale_min": 50,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 22,
+    "category": "A",
+    "question": "今年以来回撤小、收益排名前20%的混合基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "ytd",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 23,
+    "category": "A",
+    "question": "近三年夏普高（大于1.5）、回撤低的股票基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "3y",
+      "factors": {
+        "sharpe_ge": 1.5,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 24,
+    "category": "A",
+    "question": "成立以来波动低、收益稳定的二级债基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "since",
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 25,
+    "category": "A",
+    "question": "近一年收益好、规模适中的QDII",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 26,
+    "category": "A",
+    "question": "近五年回撤不超20%、夏普大于1.0的混合偏股",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "5y",
+      "factors": {
+        "max_drawdown_le": 0.2,
+        "sharpe_ge": 1.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 27,
+    "category": "A",
+    "question": "近三年规模在20到100亿、收益排名前15%的主动混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "scale_min": 20,
+        "scale_max": 100,
+        "return_rank_ge": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 28,
+    "category": "A",
+    "question": "近一年回撤小于10%、波动小的指数ETF",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": "1y",
+      "factors": {
+        "max_drawdown_le": 0.1,
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 29,
+    "category": "A",
+    "question": "近三年收益靠前、最大回撤12%以内、规模适中的债券",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.12,
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 30,
+    "category": "A",
+    "question": "成立以来年化收益8%以上、夏普高的股票基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "since",
+      "factors": {
+        "annual_return_ge": 0.08,
+        "sharpe_ge": 1.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 31,
+    "category": "A",
+    "question": "近一年规模小（5亿内）、收益排名前30%的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "scale_max": 5,
+        "return_rank_ge": 0.3
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 32,
+    "category": "A",
+    "question": "近三年回撤控制好（不超10%）、收益高的宽基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "3y",
+      "factors": {
+        "max_drawdown_le": 0.1,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 33,
+    "category": "A",
+    "question": "近五年波动小、回撤低的主动股混",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "5y",
+      "factors": {
+        "volatility_le": 0.1,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 34,
+    "category": "A",
+    "question": "近一年收益排名前20%、夏普大于1.2的QDII",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "sharpe_ge": 1.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 35,
+    "category": "A",
+    "question": "近三年规模适中、年化收益10%以上、回撤不超15%的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "scale_min": 2,
+        "scale_max": 50,
+        "annual_return_ge": 0.1,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 36,
+    "category": "A",
+    "question": "今年以来回撤小、波动低的债券基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "ytd",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 37,
+    "category": "A",
+    "question": "近三年收益稳定、夏普高的指数基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "3y",
+      "factors": {
+        "volatility_le": 0.1,
+        "sharpe_ge": 1.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 38,
+    "category": "A",
+    "question": "成立以来规模大、收益靠前的沪深300ETF",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": "since",
+      "factors": {
+        "scale_min": 50,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 39,
+    "category": "A",
+    "question": "近一年回撤低、收益好的二级债",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "1y",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 40,
+    "category": "A",
+    "question": "近五年收益排名前10%、回撤不超25%、规模适中的主动混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "5y",
+      "factors": {
+        "return_rank_ge": 0.1,
+        "max_drawdown_le": 0.25,
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 41,
+    "category": "B",
+    "question": "推荐几只主动混合基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 42,
+    "category": "B",
+    "question": "有什么好的股票型基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 43,
+    "category": "B",
+    "question": "想买点债券基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 44,
+    "category": "B",
+    "question": "宽基指数基金有哪些",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 45,
+    "category": "B",
+    "question": "场内ETF怎么选",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 46,
+    "category": "B",
+    "question": "想配置点QDII",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 47,
+    "category": "B",
+    "question": "货币基金哪只划算",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "money"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 48,
+    "category": "B",
+    "question": "主动股票基金推荐",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 49,
+    "category": "B",
+    "question": "中长期纯债基金推荐",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 50,
+    "category": "B",
+    "question": "沪深300相关的指数基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 51,
+    "category": "B",
+    "question": "混合偏股基金有哪些",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 52,
+    "category": "B",
+    "question": "二级债基推荐几只",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 53,
+    "category": "B",
+    "question": "海外QDII基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 54,
+    "category": "B",
+    "question": "宽基ETF有哪些",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 55,
+    "category": "B",
+    "question": "纯债基金推荐",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 56,
+    "category": "C",
+    "question": "近一年表现稳健的债券基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "1y",
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 57,
+    "category": "C",
+    "question": "近三年走势平稳的混合基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 58,
+    "category": "C",
+    "question": "今年以来收益不错的股票基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "ytd",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 59,
+    "category": "C",
+    "question": "成立以来长期业绩好的主动混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "since",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 60,
+    "category": "C",
+    "question": "近五年累计收益高的宽基指数",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "5y",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 61,
+    "category": "C",
+    "question": "近一年波动可控的QDII",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": "1y",
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 62,
+    "category": "C",
+    "question": "近三年回撤收敛的债券型",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "3y",
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 63,
+    "category": "C",
+    "question": "今年以来表现抗跌的混合基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "ytd",
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 64,
+    "category": "C",
+    "question": "近五年稳健增值的二级债",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "5y",
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 65,
+    "category": "C",
+    "question": "成立以来收益稳定的股票基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "since",
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 66,
+    "category": "D",
+    "question": "近三年混合基金，不要新能源、收益排名前20%",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": [
+        "新能源"
+      ]
+    }
+  },
+  {
+    "id": 67,
+    "category": "D",
+    "question": "近一年股票基，剔除医药、规模适中",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "1y",
+      "factors": {
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": [
+        "医药"
+      ]
+    }
+  },
+  {
+    "id": 68,
+    "category": "D",
+    "question": "想买主动混合，别碰白酒和地产",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "白酒",
+        "地产"
+      ]
+    }
+  },
+  {
+    "id": 69,
+    "category": "D",
+    "question": "近三年主动混合，收益好、回撤小，不买军工",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": [
+        "军工"
+      ]
+    }
+  },
+  {
+    "id": 70,
+    "category": "D",
+    "question": "宽基指数基金，避开白酒",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "白酒"
+      ]
+    }
+  },
+  {
+    "id": 71,
+    "category": "D",
+    "question": "近一年QDII，不要美股科技",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": "1y",
+      "factors": {},
+      "exclude": [
+        "美股科技"
+      ]
+    }
+  },
+  {
+    "id": 72,
+    "category": "D",
+    "question": "混合偏股，剔除半导体和新能源",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "半导体",
+        "新能源"
+      ]
+    }
+  },
+  {
+    "id": 73,
+    "category": "D",
+    "question": "近三年债券基金，不要可转债",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "3y",
+      "factors": {},
+      "exclude": [
+        "可转债"
+      ]
+    }
+  },
+  {
+    "id": 74,
+    "category": "D",
+    "question": "近一年混合基，收益靠前、规模适中，避开新能源车",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": [
+        "新能源车"
+      ]
+    }
+  },
+  {
+    "id": 75,
+    "category": "D",
+    "question": "主动股票，别买白酒、医药、新能源",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "白酒",
+        "医药",
+        "新能源"
+      ]
+    }
+  },
+  {
+    "id": 76,
+    "category": "D",
+    "question": "近三年混合基，回撤小、收益高，剔除房地产",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "return_rank_ge": 0.2
+      },
+      "exclude": [
+        "房地产"
+      ]
+    }
+  },
+  {
+    "id": 77,
+    "category": "D",
+    "question": "沪深300ETF，不要金融地产",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "金融",
+        "地产"
+      ]
+    }
+  },
+  {
+    "id": 78,
+    "category": "D",
+    "question": "近一年混合基，避开券商和保险",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {},
+      "exclude": [
+        "券商",
+        "保险"
+      ]
+    }
+  },
+  {
+    "id": 79,
+    "category": "D",
+    "question": "近五年主动混合，收益排名前20%、回撤不超20%，不买军工",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "5y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.2
+      },
+      "exclude": [
+        "军工"
+      ]
+    }
+  },
+  {
+    "id": 80,
+    "category": "D",
+    "question": "债券基金，剔除可转债和城投",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "可转债",
+        "城投"
+      ]
+    }
+  },
+  {
+    "id": 81,
+    "category": "D",
+    "question": "近三年主动混合，不要互联网和港股通",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {},
+      "exclude": [
+        "互联网",
+        "港股通"
+      ]
+    }
+  },
+  {
+    "id": 82,
+    "category": "D",
+    "question": "近一年股票基金，避开新能源、半导体",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "1y",
+      "factors": {},
+      "exclude": [
+        "新能源",
+        "半导体"
+      ]
+    }
+  },
+  {
+    "id": 83,
+    "category": "D",
+    "question": "宽基指数，剔除白酒和医药",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "白酒",
+        "医药"
+      ]
+    }
+  },
+  {
+    "id": 84,
+    "category": "D",
+    "question": "近三年混合基，收益稳定、规模适中，不买地产",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "volatility_le": 0.1,
+        "scale_min": 2,
+        "scale_max": 50
+      },
+      "exclude": [
+        "地产"
+      ]
+    }
+  },
+  {
+    "id": 85,
+    "category": "D",
+    "question": "QDII，不要原油和黄金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "原油",
+        "黄金"
+      ]
+    }
+  },
+  {
+    "id": 86,
+    "category": "E",
+    "question": "想找个好一点的基金",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 87,
+    "category": "E",
+    "question": "推荐个靠谱的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 88,
+    "category": "E",
+    "question": "有什么值得买的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 89,
+    "category": "E",
+    "question": "稳健一点的就行",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 90,
+    "category": "E",
+    "question": "性价比高的基金",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 91,
+    "category": "E",
+    "question": "帮我选个不错的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 92,
+    "category": "E",
+    "question": "想要个表现好的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 93,
+    "category": "E",
+    "question": "有合适的推荐吗",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 94,
+    "category": "E",
+    "question": "随便来个稳健的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 95,
+    "category": "E",
+    "question": "想买点不错的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 96,
+    "category": "E",
+    "question": "哪个基金比较好",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 97,
+    "category": "E",
+    "question": "给个靠谱的选择",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 98,
+    "category": "E",
+    "question": "想要个省心的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 99,
+    "category": "E",
+    "question": "挑个放心的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 100,
+    "category": "E",
+    "question": "有没有好的介绍",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  }
+]

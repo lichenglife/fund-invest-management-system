@@ -1,0 +1,960 @@
+[
+  {
+    "id": 1,
+    "category": "K",
+    "question": "别让我血本无归，稳点儿的混合基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 2,
+    "category": "K",
+    "question": "想找个能睡着觉的基金，别太刺激",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 3,
+    "category": "K",
+    "question": "不想天天盯盘，躺赢那种股票基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 4,
+    "category": "K",
+    "question": "有没有涨得多跌得少的，拿久了不心慌的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 5,
+    "category": "K",
+    "question": "想要个买了不用操心的混合",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 6,
+    "category": "K",
+    "question": "回撤别太狠，收益还过得去的主动混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 7,
+    "category": "K",
+    "question": "别坐过山车，稳稳的债基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 8,
+    "category": "K",
+    "question": "亏也别亏太多，每年能赚个七八个点的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "annual_return_ge": 0.07
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 9,
+    "category": "K",
+    "question": "就想稳稳增值，别大起大落的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 10,
+    "category": "K",
+    "question": "找个波动不大的，长期拿着省心的债券",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 11,
+    "category": "K",
+    "question": "收益别太拉胯，回撤控住的股票基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 12,
+    "category": "K",
+    "question": "别整那些花里胡哨的，老实债基就行",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 13,
+    "category": "K",
+    "question": "想抄个底，跌透了再说的那种",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 14,
+    "category": "K",
+    "question": "要个能跑赢通胀的，稳当点的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 15,
+    "category": "K",
+    "question": "别一把亏光，慢慢涨的混合基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 16,
+    "category": "L",
+    "question": "就要昨天聊那种，回撤别太大的",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 17,
+    "category": "L",
+    "question": "跟上面那个差不多，但别碰白酒",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 18,
+    "category": "L",
+    "question": "还是买混合吧，规模别太小",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "scale_min": 2.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 19,
+    "category": "L",
+    "question": "换成指数，去掉金融地产",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "金融",
+        "地产"
+      ]
+    }
+  },
+  {
+    "id": 20,
+    "category": "L",
+    "question": "还是股票，回撤压到10%以内",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 21,
+    "category": "L",
+    "question": "那个沪深300的，别要金融",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "金融"
+      ]
+    }
+  },
+  {
+    "id": 22,
+    "category": "L",
+    "question": "换QDII，别碰原油",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "qdii"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "原油"
+      ]
+    }
+  },
+  {
+    "id": 23,
+    "category": "L",
+    "question": "还是债基，规模大点的",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "scale_min": 50.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 24,
+    "category": "L",
+    "question": "跟刚才一样，但别买新能源",
+    "expect": {
+      "clarify": true,
+      "type": [],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 25,
+    "category": "L",
+    "question": "就要前面说的主动混合，回撤小点",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 26,
+    "category": "M",
+    "question": "近san年huode高、回撤小的混和基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 27,
+    "category": "M",
+    "question": "规莫适中的股票鸡",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "scale_min": 2.0,
+        "scale_max": 50.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 28,
+    "category": "M",
+    "question": "近一念收益考前的主动股混",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 29,
+    "category": "M",
+    "question": "回撤控住在士个点以内的债券",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 30,
+    "category": "M",
+    "question": "想买点主动混和，别碰白九",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": [
+        "白酒"
+      ]
+    }
+  },
+  {
+    "id": 31,
+    "category": "M",
+    "question": "夏普高一点，回撤别大的股票基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "sharpe_ge": 1.0,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 32,
+    "category": "M",
+    "question": "规模再2到50忆的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "scale_min": 2.0,
+        "scale_max": 50.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 33,
+    "category": "M",
+    "question": "近三年收溢排名前百份之二十的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 34,
+    "category": "M",
+    "question": "波懂小一点的指数鸡",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 35,
+    "category": "M",
+    "question": "年化收溢八个点以上的债基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "annual_return_ge": 0.08
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 36,
+    "category": "N",
+    "question": "要个 low risk 的混合基金",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 37,
+    "category": "N",
+    "question": "sharpe 高一点，回撤小的股票",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "sharpe_ge": 1.0,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 38,
+    "category": "N",
+    "question": "近一年 high return 的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 39,
+    "category": "N",
+    "question": "ETF 别太 volatile，规模大些",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "etf"
+      ],
+      "window": null,
+      "factors": {
+        "volatility_le": 0.1,
+        "scale_min": 50.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 40,
+    "category": "N",
+    "question": "要 beta 低的宽基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 41,
+    "category": "N",
+    "question": "long term 持有，稳点的债基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "since",
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 42,
+    "category": "N",
+    "question": "short 回撤的混合基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 43,
+    "category": "N",
+    "question": "收益 top 20% 的股票基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 44,
+    "category": "O",
+    "question": "回撤十几个点以内的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 45,
+    "category": "O",
+    "question": "收益前百分之二十的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 46,
+    "category": "O",
+    "question": "规模两三个亿到五十亿的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "scale_min": 2.0,
+        "scale_max": 50.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 47,
+    "category": "O",
+    "question": "年化十个点以上的债基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "annual_return_ge": 0.1
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 48,
+    "category": "O",
+    "question": "夏普一点五以上的股票",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": null,
+      "factors": {
+        "sharpe_ge": 1.5
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 49,
+    "category": "O",
+    "question": "回撤不超过两成的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.2
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 50,
+    "category": "O",
+    "question": "规模小几亿的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "scale_max": 5.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 51,
+    "category": "P",
+    "question": "近一年别太刺激、能跑赢余额宝两三倍、别买新能源的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "return_rank_ge": 0.2
+      },
+      "exclude": [
+        "新能源"
+      ]
+    }
+  },
+  {
+    "id": 52,
+    "category": "P",
+    "question": "想找个波动小、长期拿着、别碰券商的债券",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": "since",
+      "factors": {
+        "volatility_le": 0.1
+      },
+      "exclude": [
+        "券商"
+      ]
+    }
+  },
+  {
+    "id": 53,
+    "category": "P",
+    "question": "收益高回撤低、规模适中、不要医药的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.15,
+        "scale_min": 2.0,
+        "scale_max": 50.0
+      },
+      "exclude": [
+        "医药"
+      ]
+    }
+  },
+  {
+    "id": 54,
+    "category": "P",
+    "question": "近三年涨得多跌得少、别买军工和半导体的股混",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "3y",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": [
+        "军工",
+        "半导体"
+      ]
+    }
+  },
+  {
+    "id": 55,
+    "category": "P",
+    "question": "不想亏钱、每年稳稳赚个五个点、别碰地产的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "annual_return_ge": 0.05
+      },
+      "exclude": [
+        "地产"
+      ]
+    }
+  },
+  {
+    "id": 56,
+    "category": "P",
+    "question": "近一年回撤别超十个点、收益排前30%、别买白酒的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": "1y",
+      "factors": {
+        "max_drawdown_le": 0.1,
+        "return_rank_ge": 0.3
+      },
+      "exclude": [
+        "白酒"
+      ]
+    }
+  },
+  {
+    "id": 57,
+    "category": "P",
+    "question": "就要那种稳健、规模别太大的债券",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "bond"
+      ],
+      "window": null,
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "scale_min": 2.0
+      },
+      "exclude": []
+    }
+  },
+  {
+    "id": 58,
+    "category": "P",
+    "question": "别重仓单一行业、分散点的混合",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "mixed"
+      ],
+      "window": null,
+      "factors": {},
+      "exclude": []
+    }
+  },
+  {
+    "id": 59,
+    "category": "P",
+    "question": "近五年回撤小、夏普高、别碰新能源半导体的主动股票",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "stock"
+      ],
+      "window": "5y",
+      "factors": {
+        "max_drawdown_le": 0.15,
+        "sharpe_ge": 1.0
+      },
+      "exclude": [
+        "新能源",
+        "半导体"
+      ]
+    }
+  },
+  {
+    "id": 60,
+    "category": "P",
+    "question": "长期拿着、收益别太差、回撤控住的宽基",
+    "expect": {
+      "clarify": false,
+      "type": [
+        "index"
+      ],
+      "window": "since",
+      "factors": {
+        "return_rank_ge": 0.2,
+        "max_drawdown_le": 0.15
+      },
+      "exclude": []
+    }
+  }
+]
