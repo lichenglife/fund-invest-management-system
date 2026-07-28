@@ -1,0 +1,26 @@
+# 金融/AI/数据源扩展依赖（按模块逐步落地时再装，避免骨架首跑负担）
+# 对齐详设§2.7。Phase 1 评估/采集/筛选不全部需要；引入须评审（§1.7）。
+
+# --- 分析与金融指标（TP-01 评估引擎 / TP-04 回测）---
+pandas==2.2.3
+numpy==2.2.1
+scipy==1.15.0
+empyrical==0.5.0
+statsmodels==0.14.4
+scikit-learn==1.6.0
+vectorbt==0.26.2
+
+# --- 数据源（TP-02/采集 §3.1；AkShare 主 + Tushare 备 §2.15）---
+akshare==1.16.0
+tushare==1.4.16
+
+# --- AI / RAG（TP-06 AI 助手；C1 LLM key 待注入）---
+langchain==0.3.14
+langchain-community==0.3.14
+chromadb==0.5.23
+
+# --- 定时任务（§3.14 调度）---
+APScheduler==3.11.0
+
+# --- Alembic 迁移（P0-04b，下一步）---
+alembic==1.14.0

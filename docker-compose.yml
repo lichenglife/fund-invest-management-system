@@ -1,0 +1,92 @@
+# docker-compose.yml · FundLens 开发栈（详设§2.5 部署 / §2.13 运行环境 / ADR-003/004）
+# 一键起：docker compose up -d
+# 生产化(P1-22)：用 .env / Docker Secrets 注入密钥，加资源限制与健康监控。
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fundlens
+      POSTGRES_USER: fundlens
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "15432:5432"  # 宿主端口避让既有占用(见 README)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fundlens -d fundlens"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "16379:6379"  # 宿主端口避让既有占用
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      APP_ENV: dev
+      LOG_LEVEL: INFO
+      DATABASE_URL: postgresql+psycopg://fundlens:changeme@postgres:5432/fundlens
+      REDIS_URL: redis://redis:6379/0
+      STREAMLIT_API_BASE: http://api:8000
+    ports:
+      - "18000:8000"  # 宿主端口避让既有占用(容器内仍 8000)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/api/v1/health')\""
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  worker:
+    build: .
+    # 采集 worker 占位(P1-01d 接 APScheduler 后改为常驻调度)
+    command: python -m workers.collect
+    environment:
+      APP_ENV: dev
+      LOG_LEVEL: INFO
+      DATABASE_URL: postgresql+psycopg://fundlens:changeme@postgres:5432/fundlens
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: "no"
+
+  streamlit:
+    build: .
+    command: >
+      streamlit run app/app.py
+      --server.port 8501 --server.address 0.0.0.0
+      --server.fileWatcherType none
+    environment:
+      APP_ENV: dev
+      STREAMLIT_API_BASE: http://api:8000
+    ports:
+      - "18501:8501"  # 宿主端口避让既有占用(容器内仍 8501)
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redis-data:

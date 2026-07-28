@@ -1,0 +1,27 @@
+# 核心运行时依赖（Phase 0 骨架即用，对齐详设§2.7 技术栈）
+# 引入新依赖须评审且有 fallback（开发规范§1.7）；禁止 latest 浮动。
+
+# --- Web 框架 ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# --- 前端(详设§2.7 纯 Python Streamlit 1.35+，不引入 TS/JS 工程)---
+streamlit==1.41.1
+
+# --- 数据库（同步，MVP 单机；pandas/empyrical/vectorbt 均同步）---
+SQLAlchemy==2.0.36
+psycopg[binary]==3.2.3
+
+# --- 缓存 / 会话 / 锁（ADR-004，生产必需；MVP 可选）---
+redis==5.2.1
+
+# --- HTTP 客户端（前端 api_client / 外部数据源）---
+httpx==0.28.1
+
+# --- 配置与日志 ---
+python-dotenv==1.0.1
+
+# --- FastAPI 表单支持（筛选/导入用，§2.21 POST /api/screen）---
+python-multipart==0.0.20

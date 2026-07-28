@@ -1,0 +1,15 @@
+# Streamlit 主题与配置(开发规范§10.4 设计令牌；原型§5 金融翠绿专业风)
+
+[theme]
+primaryColor = "#0f9d76"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f5f7fa"
+textColor = "#1f2937"
+font = "sans serif"
+
+[server]
+runOnSave = true
+headless = true
+
+[browser]
+gatherUsageStats = false

@@ -1,0 +1,42 @@
+# .github/workflows/ci.yml · 质量门禁（开发规范§1.3 门禁 + §9.2 CI/CD + §11 DoD）
+# 流水线：lint -> type -> test -> cover。任一红阻断合并。
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: isort (check)
+        run: isort --check --diff --profile black --line-length 100 .
+
+      - name: black (check)
+        run: black --check --line-length 100 .
+
+      - name: ruff
+        run: ruff check .
+
+      - name: mypy
+        run: mypy .
+
+      - name: pytest + coverage
+        run: pytest --cov=domain --cov=schemas --cov=api --cov=infra --cov=config --cov-report=term-missing

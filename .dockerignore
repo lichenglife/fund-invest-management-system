@@ -1,0 +1,22 @@
+# Docker 构建上下文排除（保持镜像精简）
+.git
+.github
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+docs
+tests
+pgdata
+redis-data
+*.log
+.env
+.env.*
+.gitignore
+.dockerignore

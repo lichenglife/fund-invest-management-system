@@ -1,0 +1,56 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# --- 虚拟环境 ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- 测试/类型缓存 ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- 环境与密钥（红线：禁止入库，§5.3/§9.1）---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# --- Docker 运行时卷 ---
+pgdata/
+redis-data/
+*.log
+logs/
+
+# --- 临时/数据 dump（§2.4 禁止项）---
+/tmp_*
+*.tmp
+*.parquet.bak
+
+# --- OS ---
+.DS_Store
+Thumbs.db
