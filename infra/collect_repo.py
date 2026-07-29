@@ -42,21 +42,26 @@ def upsert_funds(db: Session, records: list[dict[str, Any]]) -> int:
         }
         for r in records
     ]
-    stmt = pg_insert(Fund).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[Fund.code],
-        set_={
-            "name": stmt.excluded.name,
-            "type": stmt.excluded.type,
-            "source": stmt.excluded.source,
-            "as_of": stmt.excluded.as_of,
-            "updated_at": func.now(),
-        },
-    )
-    db.execute(stmt)
+    # 分批 upsert(PG 单语句参数上限 65535；5 字段/行 -> 单批≤13000 行，留余量用 BATCH_SIZE)
+    total = 0
+    for i in range(0, len(rows), BATCH_SIZE):
+        batch = rows[i : i + BATCH_SIZE]
+        stmt = pg_insert(Fund).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[Fund.code],
+            set_={
+                "name": stmt.excluded.name,
+                "type": stmt.excluded.type,
+                "source": stmt.excluded.source,
+                "as_of": stmt.excluded.as_of,
+                "updated_at": func.now(),
+            },
+        )
+        db.execute(stmt)
+        total += len(batch)
     db.commit()
-    logger.info("upsert.funds", extra={"action": "upsert", "count": len(rows)})
-    return len(rows)
+    logger.info("upsert.funds", extra={"action": "upsert", "count": total})
+    return total
 
 
 def upsert_navs(db: Session, records: list[NavRecord]) -> int:
