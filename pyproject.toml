@@ -73,7 +73,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 no_implicit_optional = true
-exclude = "(^|/)(app|docs|build|\\.venv)/"
+exclude = "(^|/)(app|docs|build|\\.venv|migrations/versions)/"
 
 [[tool.mypy.overrides]]
 # 第三方无 stub 的库放宽（随模块落地补充）
@@ -97,6 +97,9 @@ testpaths = ["tests"]
 pythonpath = ["."]
 python_files = ["test_*.py"]
 addopts = "-ra --strict-markers"
+markers = [
+  "db: 需真实 PostgreSQL(compose) 的数据库集成测试(无 PG 时 -m 'not db' 跳过)",
+]
 filterwarnings = [
   "error",
   "ignore::DeprecationWarning:pkg_resources.*",

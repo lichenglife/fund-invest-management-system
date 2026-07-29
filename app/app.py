@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import sys
-from datetime import date
 from pathlib import Path
 
 # 仓库根加入 sys.path，使 app/ 可 import config/schemas(本地开发)
@@ -18,8 +17,9 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 import streamlit as st  # noqa: E402
-from api_client import health  # noqa: E402
-from utils import status_badge  # noqa: E402
+from api_client import health, is_mock  # noqa: E402
+from state import set as state_set  # noqa: E402
+from utils import mock_badge, status_badge  # noqa: E402
 
 
 def render_topbar() -> None:
@@ -28,10 +28,11 @@ def render_topbar() -> None:
     with cols[0]:
         st.markdown("### 📈 FundLens · 基金学习利器")
     with cols[1]:
-        st.selectbox("角色", ["学习者", "评估者", "交易者"], key="role")
+        role = st.selectbox("角色", ["学习者", "评估者", "交易者"], key="role")
+        state_set("role", role)
     with cols[2]:
         # 数据截至日期占位(真实值由 P1-12 仪表盘聚合接口提供)
-        st.caption(f"数据截至 {date.today().isoformat()}")
+        st.caption("数据截至 2025-07-20（净值 T+1 / 宏观 T+15）")
 
 
 def render_status() -> None:
@@ -43,7 +44,9 @@ def render_status() -> None:
         if ok and data:
             st.caption(f"v{data.get('version', '?')} · {data.get('env', '?')}")
         else:
-            st.caption("后端未就绪，仅展示占位")
+            st.caption("后端未就绪，展示示例数据")
+        if is_mock():
+            st.info(mock_badge())
 
 
 def main() -> None:
@@ -59,8 +62,7 @@ def main() -> None:
     st.divider()
     st.markdown("#### 欢迎使用 FundLens")
     st.markdown(
-        "覆盖 **学 → 懂 → 筛 → 练 → 评 → 穿** 12 个功能模块。"
-        "请从左侧导航选择模块进入。当前为 **Phase 0 工程骨架**，各模块占位待实现。"
+        "覆盖 **学 -> 懂 -> 筛 -> 练 -> 评 -> 穿** 12 个功能模块。" "请从左侧导航选择模块进入。"
     )
 
     with st.container(border=True):

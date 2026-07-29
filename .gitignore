@@ -40,6 +40,12 @@ coverage.xml
 *.pem
 secrets/
 
+# --- Claude Code 本地配置(个人,不入库；共享 settings.json/agents 例外)---
+.claude/settings.local.json
+.claude/plans/
+.claude/cache/
+.claude/sessions/
+
 # --- Docker 运行时卷 ---
 pgdata/
 redis-data/
