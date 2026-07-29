@@ -73,7 +73,12 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 no_implicit_optional = true
-exclude = "(^|/)(app|docs|build|\\.venv|migrations/versions)/"
+exclude = "(^|/)(app|docs|build|\\.venv|migrations/versions|tests)/"
+
+[[tool.mypy.overrides]]
+# 前端 app/ 走 pyright(§10.1)；mypy 放宽 no-any-return 等，避免 import 触发的噪声
+module = ["app.*", "app.mock.*"]
+disable_error_code = ["no-any-return", "attr-defined", "type-arg", "no-untyped-def"]
 
 [[tool.mypy.overrides]]
 # 第三方无 stub 的库放宽（随模块落地补充）

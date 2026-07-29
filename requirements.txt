@@ -23,5 +23,8 @@ httpx==0.28.1
 # --- 配置与日志 ---
 python-dotenv==1.0.1
 
+# --- 鉴权（§2.19.6 单用户 MVP：AES-256 密码 + AES 会话令牌，前后端 AES 加解密）---
+cryptography==49.0.0
+
 # --- FastAPI 表单支持（筛选/导入用，§2.21 POST /api/screen）---
 python-multipart==0.0.20

@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
@@ -21,15 +20,6 @@ from sqlalchemy.orm import Session
 from infra.db.models import Fund
 
 pytestmark = pytest.mark.db
-
-
-@pytest.fixture()
-def db_url() -> str:
-    """测试库 URL(localhost:15432，避让既有占用)。"""
-    return os.environ.get(
-        "TEST_DATABASE_URL",
-        "postgresql+psycopg://fundlens:changeme@localhost:15432/fundlens",
-    )
 
 
 @pytest.fixture()

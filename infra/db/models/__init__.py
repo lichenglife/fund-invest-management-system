@@ -7,11 +7,13 @@
 做 DTO，不反向依赖 ORM(开发规范§2.1)。
 """
 
+from infra.db.models.admin import AdminUser
 from infra.db.models.fund import Fund, Holding, Nav, ResearchMetric, Score
 from infra.db.models.paper import PaperAccount, PaperPosition, PaperTrade
 from infra.db.models.portfolio import Portfolio, PortfolioWeight
 
 __all__: list[str] = [
+    "AdminUser",
     "Fund",
     "Holding",
     "Nav",

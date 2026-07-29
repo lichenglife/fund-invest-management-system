@@ -17,9 +17,9 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 import streamlit as st  # noqa: E402
-from api_client import health, is_mock  # noqa: E402
-from state import set as state_set  # noqa: E402
-from utils import mock_badge, status_badge  # noqa: E402
+
+from app.api_client import health, is_mock  # noqa: E402
+from app.utils import mock_badge, status_badge  # noqa: E402
 
 
 def render_topbar() -> None:
@@ -28,8 +28,8 @@ def render_topbar() -> None:
     with cols[0]:
         st.markdown("### 📈 FundLens · 基金学习利器")
     with cols[1]:
-        role = st.selectbox("角色", ["学习者", "评估者", "交易者"], key="role")
-        state_set("role", role)
+        # key="role" 的 selectbox 自动持久化到 session_state，无需再显式 set
+        st.selectbox("角色", ["学习者", "评估者", "交易者"], key="role")
     with cols[2]:
         # 数据截至日期占位(真实值由 P1-12 仪表盘聚合接口提供)
         st.caption("数据截至 2025-07-20（净值 T+1 / 宏观 T+15）")

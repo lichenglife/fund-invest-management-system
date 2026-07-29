@@ -244,20 +244,20 @@ SCORES: dict[str, dict[str, Any]] = {
     "000961": {
         "code": "000961",
         "window": "3y",
-        "composite": 83,
+        "composite": 79,  # Σcontrib = 21+22+16+14.25+6 = 79.25(ADR-002 一致)
         "weights": DEFAULT_WEIGHTS,
         "factors": {
             "ret": {"sub_score": 70, "raw": 0.072, "contrib": 21.0},
             "risk": {"sub_score": 88, "raw": -0.094, "contrib": 22.0},
             "perf": {"sub_score": 80, "raw": 1.10, "contrib": 16.0},
-            "scale": {"sub_score": 95, "raw": 120.0, "contrib": 14.2},
+            "scale": {"sub_score": 95, "raw": 120.0, "contrib": 14.25},
             "manager": {"sub_score": 60, "raw": 0.45, "contrib": 6.0},
         },
     },
     "161725": {
         "code": "161725",
         "window": "3y",
-        "composite": 80,
+        "composite": 75,  # Σcontrib = 26.4+15+15+10.5+7.8 = 74.7(ADR-002 一致)
         "weights": DEFAULT_WEIGHTS,
         "factors": {
             "ret": {"sub_score": 88, "raw": 0.155, "contrib": 26.4},
@@ -625,7 +625,7 @@ AI_QUICK_COMMANDS: list[str] = [
     "📊 生成本周投资周报",
     "🔄 手动重跑周报",
 ]
-AI_DEMO_CHAT: list[dict[str, str]] = [
+AI_DEMO_CHAT: list[dict[str, str | bool]] = [
     {"role": "user", "text": "帮我解读 110011 最新季报"},
     {
         "role": "assistant",

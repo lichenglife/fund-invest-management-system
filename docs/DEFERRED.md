@@ -25,7 +25,7 @@
 
 ---
 
-## D3 · scores 表五因子口径文档冲突
+## D3 · scores 
 
 - **发现来源**：§2.20.2 `scores.weights` 注释与 §2.21.2 响应示例仍为旧口径 `ret/risk/style/cost/scale`（E4/E5 修订**前**）；CLAUDE.md §4 红线（最高优先级）规定新口径 `ret/risk/perf/scale/manager`（E4/E5 闭环）。
 - **性质**：文档未同步修订（详设 §2.20.2/§2.21.2 与 CLAUDE.md §4 不一致）。
