@@ -104,6 +104,8 @@ python_files = ["test_*.py"]
 addopts = "-ra --strict-markers"
 markers = [
   "db: 需真实 PostgreSQL(compose) 的数据库集成测试(无 PG 时 -m 'not db' 跳过)",
+  "perf: 性能基准测试(CI 默认 -m 'not perf' 跳过，本地/compose 跑；防退化回归)",
+  "live: 真实外部接口烟测(需网络/AkShare；CI 无网络跳过)",
 ]
 filterwarnings = [
   "error",
