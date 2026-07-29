@@ -1,0 +1,154 @@
+"""评估接口集成测试(P1-04a，§3.3.6 / §2.21 / §3.3.7 溯源)。
+
+DB 集成：写入基金+净值，调端点验证信封(7字段) + 指标/cv_flag + 40002 基金不存在。
+标记 db，无 PG 跳过。
+"""
+
+from __future__ import annotations
+
+from datetime import date, timedelta
+from decimal import Decimal
+
+import pytest
+from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.db
+
+
+@pytest.fixture()
+def client_with_fund(db_url: str):
+    """建表 + 写入基金+净值 + 返回 TestClient(依赖注入隔离 DB)。"""
+    from collections.abc import Iterator
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session, sessionmaker
+
+    import infra.db.models  # noqa: F401
+    from api.deps import get_db
+    from infra.db import Base
+    from infra.db.models import Fund, Nav
+
+    eng = create_engine(db_url)
+    Base.metadata.drop_all(eng, checkfirst=True)
+    Base.metadata.create_all(eng)
+    TestSession = sessionmaker(bind=eng, autocommit=False, autoflush=False)
+    with TestSession() as s:
+        s.add(
+            Fund(
+                code="000001",
+                name="华夏成长混合",
+                type_="mixed",
+                source="AkShare",
+                as_of=date.today(),
+            )
+        )
+        # 生成 252 天净值(稳定上涨,年化约10%)
+        base = date(2024, 1, 1)
+        for i in range(252):
+            nav_val = Decimal("1.0") * (Decimal("1.10") ** (Decimal(str(i)) / Decimal("250")))
+            s.add(
+                Nav(
+                    code="000001",
+                    trade_date=base + timedelta(days=i),
+                    nav=nav_val,
+                    acc_nav=nav_val * 2,
+                    adj_nav=nav_val,
+                    is_estimate=False,
+                    source="AkShare",
+                    as_of=date.today(),
+                )
+            )
+        s.commit()
+
+    def _override_get_db() -> Iterator[Session]:
+        db = TestSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    from api.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(eng)
+    eng.dispose()
+
+
+class TestMetricsEndpoint:
+    """GET /api/v1/funds/{code}/metrics(§3.3.2)。"""
+
+    def test_returns_envelope(self, client_with_fund: TestClient) -> None:
+        """§2.21 七字段信封 + 指标(§3.3.7 source/as_of)。"""
+        resp = client_with_fund.get("/api/v1/funds/000001/metrics?window=3Y")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert set(body.keys()) == {
+            "code",
+            "data",
+            "source",
+            "as_of",
+            "disclaimer",
+            "message",
+            "trace_id",
+        }
+        assert body["code"] == 0
+        data = body["data"]
+        assert data["annualized_return"] is not None
+        assert data["max_drawdown"] is not None
+        assert data["cv_flag"] is not None
+        assert body["source"] == "batch"
+        assert body["as_of"] is not None
+
+    def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
+        """§4.2 基金不存在 -> 40002。"""
+        resp = client_with_fund.get("/api/v1/funds/999999/metrics")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
+
+
+class TestScoreEndpoint:
+    """GET /api/v1/funds/{code}/score(§3.3.8.1, 唯一权威源)。"""
+
+    def test_returns_score_envelope(self, client_with_fund: TestClient) -> None:
+        """五因子评分信封。"""
+        resp = client_with_fund.get("/api/v1/funds/000001/score")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "composite" in data
+        assert "factors" in data
+        assert "weights" in data
+        # 权重默认 SCORE_WEIGHTS(E4/E5: ret=20)
+        assert data["weights"]["ret"] == 20
+
+    def test_custom_weights(self, client_with_fund: TestClient) -> None:
+        """可调权重(ADR-002, ?weights=)。"""
+        resp = client_with_fund.get("/api/v1/funds/000001/score?weights=50:25:20:15:20")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["weights"]["ret"] == 50  # 调权生效
+
+    def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
+        resp = client_with_fund.get("/api/v1/funds/999999/score")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
+
+
+class TestStyleboxEndpoint:
+    """GET /api/v1/funds/{code}/stylebox(§3.3.1, E13)。"""
+
+    def test_equity_type_returns(self, client_with_fund: TestClient) -> None:
+        """权益类(mixed) -> 返回(算法待实现占位)。"""
+        resp = client_with_fund.get("/api/v1/funds/000001/stylebox")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "size" in data
+        assert "value_growth" in data
+
+    def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
+        resp = client_with_fund.get("/api/v1/funds/999999/stylebox")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
