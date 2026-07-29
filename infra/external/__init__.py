@@ -5,9 +5,21 @@ LLM 失 -> 规则摘要(50303)；降级须可观测(degraded=true)。
 
 - ``DataSource``：抽象数据源接口(P1-01a/b 适配器实现)。
 - ``AkShareDataSource``：AkShare 主源(P1-01a)。
-- Tushare fallback(P1-01b)、LLM 客户端(P1-06b)待落地。
+- ``TushareDataSource``：Tushare 备源 fallback(P1-01b)。
+- ``DataSourceCoordinator``：主备 fallback 协调(§2.15)。
+- LLM 客户端(P1-06b)待落地。
 """
 
-from infra.external.base import DataSource
+from infra.external.akshare_source import AkShareDataSource
+from infra.external.base import SRC_AKSHARE, SRC_TUSHARE, DataSource
+from infra.external.coordinator import DataSourceCoordinator
+from infra.external.tushare_source import TushareDataSource
 
-__all__: list[str] = ["DataSource"]
+__all__: list[str] = [
+    "DataSource",
+    "SRC_AKSHARE",
+    "SRC_TUSHARE",
+    "AkShareDataSource",
+    "TushareDataSource",
+    "DataSourceCoordinator",
+]
