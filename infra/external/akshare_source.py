@@ -73,15 +73,19 @@ class AkShareDataSource(DataSource):
     def fetch_nav(self, code: str, start: str, end: str) -> list[dict[str, Any]]:
         """拉取基金净值历史(§2.20.2 navs)。
 
-        AkShare ``fund_open_fund_info_em(symbol, indicator="单位净值走势")``。
+        AkShare ``fund_open_fund_info_em``：单位净值(indicator="单位净值走势")
+        + 累计净值(indicator="累计净值走势")，按净值日期合并。
         ``start``/``end`` 为 YYYYMMDD，按净值日期区间过滤。
 
-        > 口径缺口(D6)：AkShare 单位净值接口无累计净值/后复权净值；
-        > ``acc_nav``/``adj_nav`` 暂填 None，由 P1-01c 清洗层补(累计净值接口/复权计算)。
+        > 口径(D6)：累计净值(acc_nav)取自 ``累计净值走势``；
+        > 后复权净值(adj_nav)需按分红复权计算(E3 红线)，暂由清洗层
+        > 用 acc_nav 作临时回退(见 domain/collect.py clean_nav)，待 P1-01c/TP-04 补全。
         """
-        df = self._call("fund_open_fund_info_em", symbol=code, indicator="单位净值走势")
+        unit_df = self._call("fund_open_fund_info_em", symbol=code, indicator="单位净值走势")
+        # 累计净值(acc_nav)：独立 indicator，按净值日期合并
+        acc_map = self._fetch_acc_nav_map(code)
         records: list[dict[str, Any]] = []
-        for _, row in df.iterrows():
+        for _, row in unit_df.iterrows():
             trade_date = str(row.get("净值日期", "")).strip()[:10]
             if not trade_date:
                 continue
@@ -97,12 +101,30 @@ class AkShareDataSource(DataSource):
                     "code": code,
                     "trade_date": trade_date,
                     "nav": float(nav) if nav not in (None, "") else None,
-                    "acc_nav": None,  # D6 待清洗层补
-                    "adj_nav": None,  # D6 待清洗层补
+                    "acc_nav": acc_map.get(trade_date),  # 累计净值(已合并)
+                    "adj_nav": None,  # D6：清洗层用 acc_nav 临时回退
                     "is_estimate": False,
                 }
             )
         return records
+
+    def _fetch_acc_nav_map(self, code: str) -> dict[str, float]:
+        """拉取累计净值，返回 {trade_date: acc_nav} 映射(供 fetch_nav 合并)。
+
+        失败返回空 dict(不阻断单位净值拉取，§8.5 降级)。
+        """
+        try:
+            df = self._call("fund_open_fund_info_em", symbol=code, indicator="累计净值走势")
+        except ExternalError:
+            logger.warning("akshare.acc_nav_failed", extra={"action": "fetch_acc", "code": code})
+            return {}
+        mapping: dict[str, float] = {}
+        for _, row in df.iterrows():
+            d = str(row.get("净值日期", "")).strip()[:10]
+            v = row.get("累计净值")
+            if d and v not in (None, ""):
+                mapping[d] = float(v)
+        return mapping
 
     def fetch_holdings(self, code: str, year: str) -> list[dict[str, Any]]:
         """拉取基金重仓股(§2.20.2 holdings，季度)。

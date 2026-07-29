@@ -11,6 +11,7 @@ from infra.db.models.admin import AdminUser
 from infra.db.models.fund import Fund, Holding, Nav, ResearchMetric, Score
 from infra.db.models.paper import PaperAccount, PaperPosition, PaperTrade
 from infra.db.models.portfolio import Portfolio, PortfolioWeight
+from infra.db.models.quality import DataQualityLog
 
 __all__: list[str] = [
     "AdminUser",
@@ -24,4 +25,5 @@ __all__: list[str] = [
     "PaperTrade",
     "Portfolio",
     "PortfolioWeight",
+    "DataQualityLog",
 ]

@@ -40,6 +40,16 @@ def _fake_nav_df() -> pd.DataFrame:
     )
 
 
+def _fake_acc_nav_df() -> pd.DataFrame:
+    """累计净值走势(供 fetch_nav 合并 acc_nav)。"""
+    return pd.DataFrame(
+        {
+            "净值日期": ["2025-07-01", "2025-07-02", "2025-07-28"],
+            "累计净值": [2.345, 2.352, 2.678],
+        }
+    )
+
+
 def _fake_holdings_df() -> pd.DataFrame:
     return pd.DataFrame(
         {
@@ -65,6 +75,9 @@ class _FakeAkshare:
 
     @staticmethod
     def fund_open_fund_info_em(symbol: str, indicator: str) -> pd.DataFrame:
+        # 按 indicator 分派：单位净值 / 累计净值
+        if indicator == "累计净值走势":
+            return _fake_acc_nav_df()
         return _fake_nav_df()
 
     @staticmethod
@@ -131,8 +144,9 @@ class TestAkShareSource:
         # 缩小区间：只取 20250702 之后
         sub = source.fetch_nav("000001", "20250702", "20251231")
         assert len(sub) == 2
-        # acc_nav/adj_nav 暂为 None(D6 口径缺口)
-        assert all(n["acc_nav"] is None for n in all_nav)
+        # acc_nav 由累计净值走势合并(D6 已补)；adj_nav 仍 None(待清洗层回退)
+        assert all_nav[2]["acc_nav"] == 2.678
+        assert all(n["adj_nav"] is None for n in all_nav)
 
     def test_fetch_holdings_mapping(self, source: AkShareDataSource) -> None:
         """重仓：占净值比例(%) -> 权重(小数)；季度串 -> report_date。"""

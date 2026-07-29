@@ -20,7 +20,7 @@
 
 - **发现来源**：详设 §2.20.3 仅罗列表名（managers / fund_dividends / discovery_entries / field_glossary / macro_indicators / market_sentiment / external_signal / sentiment_news / stock_financials / rag_documents / ai_weekly_reports / risk_assessments / alerts / valuation_signals / data_quality_log / notes / learning_paths / case_scenarios / case_replay_logs / behavior_assessments / data_collection_jobs / scheduler_jobs），"字段以 §3.x.4 为准"，但 §3.x.4 各处**仅罗列表名，无字段 DDL**。
 - **性质**：文档不完整（字段定义缺失），需在实现对应模块时补字段设计。
-- **当前处理**：P0-04 仅交付 §2.20.2 明确的 10 核心表；22 表待各自模块落地时补建。
+- **当前处理**：P0-04 仅交付 §2.20.2 明确的 10 核心表；22 表待各自模块落地时补建。`admin_users`(P0-05)与 `data_quality_log`(P1-01c，技规§3.2 DDL)已补。
 - **影响**：对应模块（P2 宏观/风险/学习、P3 穿透/AI）开工前需补表设计；不阻塞当前 Phase 1 主干（评估/采集/筛选/模拟/组合）。
 - **建议处置时点**：各模块任务开工前（如 P2-01 宏观前补 macro_indicators 表），逐表加迁移。
 > 📌 **状态：延期项（非缺陷）**。22 张扩展表字段 DDL 在各模块任务开工前随 §3.x 数据库设计补充（已在 §2.20.3 注记），不阻塞 Phase 1 主干。
@@ -59,6 +59,28 @@
 
 ---
 
+## D6 · AkShare/Tushare 净值 acc_nav/adj_nav 口径
+
+- **发现来源**：P1-01a 核实 AkShare 运行时接口。`fund_open_fund_info_em(indicator="单位净值走势")` 仅返回单位净值，无累计/后复权净值；§2.20.2 `navs` 要求 `nav/acc_nav/adj_nav`（`adj_nav` NOT NULL）。
+- **性质**：数据源口径缺口（非算法口径）；后复权净值涉及 E3 红线（分红复权）。
+- **当前处理**（P1-01c 更新）：
+  - `acc_nav`（累计净值）：已补——adapter `fetch_nav` 合并 `累计净值走势` indicator（AkShare）/ Tushare `fund_nav.accum_nav`。
+  - `adj_nav`（后复权净值）：**临时回退 `adj_nav = acc_nav`**（累计净值已含分红累积，作近似后复权），标 `quality_flag="adj_nav_proxy"`（见 `domain/collect.py clean_nav`）；upsert 时 `adj_nav` 兜底非空（§2.20.2 NOT NULL）。
+- **影响**：后复权净值非严格口径（E3）；回测/评分用 adj_nav 时需注意为近似值。
+- **建议处置时点**：P1-01c/TP-04 回测引擎落地时，按 `fund_dividends` 分红明细计算真正后复权净值（删 DIVIDEND_MODE，E3 红线），替换回退。
+
+---
+
+## D7 · funds 表字段与技术规格§3.2 DDL 不一致
+
+- **发现来源**：技术规格§3.2 `funds` DDL 含 `listing_board/scale/fee_rate/custodian/intraday_price/premium_discount`（DC-002 全类型/场内/折溢价），但详设§2.20.2 `funds` 表无这些字段。
+- **性质**：两份设计文档口径不一致（详设§2.20.2 vs 技术规格§3.2）；按"详设+开发规范为准"原则，P0-04 以详设§2.20.2 建模。
+- **当前处理**：P0-04 模型按详设§2.20.2（无上述字段）；P1-01a/b 适配器 `fetch_fund_list` 仅映射 `code/name/type_`。
+- **影响**：DC-002 全类型/场内/折溢价功能（规模/费率/盘中价/折溢价）需补字段；不阻塞采集链路。
+- **建议处置时点**：P1-02a/b（基金数据中心接口）落地 DC-002 全类型时，按技术规格§3.2 补字段迁移。
+
+---
+
 *更新约定：每解决一项，在对应条目末尾追加 `已解决 @ <commit>` 并保留条目用于回溯。*
 
 ---
@@ -67,10 +89,12 @@
 
 | 条目 | 状态 | 处置 | 关联 commit |
 |------|------|------|-------------|
-| D1 · navs 分区策略 | 📌 延期（非缺陷） | §2.20.2 DDL 注记，P1-22 落地 | — |
-| D2 · 22 表字段 | 📌 延期（非缺陷） | §2.20.3 注记，各模块开工前补 | — |
+| D1 · navs 分区策略 | 📌 延期（非缺陷） | §2.20.2 DDL 注记，P1-22 落地 | - |
+| D2 · 22 表字段 | 📌 延期（非缺陷） | §2.20.3 注记，各模块开工前补；admin_users/data_quality_log 已补 | - |
 | D3 · 五因子口径冲突 | ✅ 已解决 | 详设 §2.20.2/§2.21.2 统一新口径 `ret/risk/perf/scale/manager` | 7612a5e |
 | D4 · 信封字段/路径不一致 | ✅ 已解决 | CLAUDE.md §6 + 开发规范 §6.2 补 `disclaimer`（7 字段）；§3 路径已由远程修正 | 7612a5e |
-| D5 · 宿主端口避让 | 📌 环境事实已处理 | docker-compose 端口避让，无仓库变更 | — |
+| D5 · 宿主端口避让 | 📌 环境事实已处理 | docker-compose 端口避让，无仓库变更 | - |
+| D6 · acc_nav/adj_nav 口径 | 🔄 部分解决 | acc_nav 已补(P1-01c)；adj_nav 临时回退 acc_nav，待 TP-04 分红复权 | P1-01c |
+| D7 · funds 表字段不一致 | 📌 延期 | 按详设§2.20.2 建模；DC-002 全类型待 P1-02 补字段 | - |
 
 > 注：本文件原以非 UTF-8 编码入库，本次重写为标准 UTF-8。
