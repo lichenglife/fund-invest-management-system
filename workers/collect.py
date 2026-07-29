@@ -1,32 +1,81 @@
-"""采集 worker 入口(详设§3.1 数据采集与质量监控 / §3.1.8 并发采集)。
+"""采集 worker 入口(详设§3.1 数据采集 / §3.14 调度 / §3.14.2 工作日18:00)。
 
-计划任务：P1-01a~d + P1-01d 定时编排(18:00)。
-当前为骨架占位：初始化日志，打印就绪状态，不执行真实采集。
+P1-01d：APScheduler 编排定时采集；可手动单次运行(``python -m workers.collect``)或
+常驻调度(``python -m workers.collect --scheduler``)。
 
-运行：``python -m workers.collect``
-TODO(P1-01a, FR-36/46): AkShare 适配器 + 清洗 + upsert + 质量日志。
-TODO(P1-01d, FR-36): APScheduler 18:00 触发编排。
+> MVP 单实例；多副本由分布式锁防重(§3.14.6)。
 """
 
 from __future__ import annotations
 
 import logging
+import sys
 
 from config.settings import get_settings
+from infra.db.session import SessionLocal
 from infra.logging import setup_logging
 
 logger = logging.getLogger(__name__)
 
 
+def run_once(codes: list[str] | None = None) -> None:
+    """单次采集(名单 + 指定 codes 净值/重仓)。"""
+    from datetime import date
+
+    from domain.collect_service import CollectService
+
+    codes = codes or []
+    today = date.today().strftime("%Y%m%d")
+    with SessionLocal() as db:
+        service = CollectService(db)
+        result = service.collect_all(codes, start=today, end=today)
+    logger.info(
+        "collect.run_done",
+        extra={"action": "collect", "funds": result["funds"], "navs": result["navs"]},
+    )
+
+
+def run_scheduler() -> None:
+    """常驻调度(§3.14.2 工作日 18:00 增量采集)。"""
+    import signal
+
+    from domain.scheduler import COLLECT_CRON, build_scheduler
+
+    scheduler = build_scheduler(
+        jobs=[
+            {
+                "id": "collect_all",
+                "func": run_once,
+                "cron": COLLECT_CRON,
+                "args": [],
+            }
+        ]
+    )
+    scheduler.start()
+    logger.info("collect.scheduler_started", extra={"action": "scheduler", "cron": COLLECT_CRON})
+
+    # 优雅退出
+    def _shutdown(signum: int, frame: object) -> None:  # noqa: ARG001
+        logger.info("collect.scheduler_stopping", extra={"action": "scheduler", "sig": signum})
+        scheduler.shutdown(wait=False)
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+    # 保持进程
+    import time
+
+    while scheduler.running:
+        time.sleep(60)
+
+
 def main() -> None:
     s = get_settings()
     setup_logging(level=s.log_level, service="fundlens-collect")
-    logger.info(
-        "worker.collect.ready",
-        extra={"action": "collect.init", "env": s.app_env},
-    )
-    # TODO(P1-01a~d): 实现采集链路
-    logger.warning("collect.not_implemented", extra={"action": "collect.run"})
+    if "--scheduler" in sys.argv:
+        run_scheduler()
+    else:
+        run_once()
 
 
 if __name__ == "__main__":

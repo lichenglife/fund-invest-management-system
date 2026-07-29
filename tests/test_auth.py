@@ -170,3 +170,22 @@ class TestAuthAPI:
         )
         assert resp.status_code == 200
         assert resp.json()["data"]["username"] == "admin"
+
+    def test_trigger_job_requires_auth_40101(self, client_with_admin: TestClient) -> None:
+        """§3.14.4/§3.14.5 trigger-job 未带令牌 -> 40101。"""
+        resp = client_with_admin.post("/api/v1/admin/trigger-job", json={"job": "fund_list"})
+        assert resp.status_code == 401
+        assert resp.json()["code"] == 40101
+
+    def test_trigger_job_invalid_job_40001(self, client_with_admin: TestClient) -> None:
+        """§3.14.4 trigger-job 鉴权通过但作业名非法 -> 40001。"""
+        tok = client_with_admin.post(
+            "/api/v1/admin/login", json={"username": "admin", "password": "InitPass123"}
+        ).json()["data"]["access_token"]
+        resp = client_with_admin.post(
+            "/api/v1/admin/trigger-job",
+            json={"job": "bogus"},
+            headers={"Authorization": f"Bearer {tok}"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40001
