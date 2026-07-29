@@ -11,7 +11,7 @@ scikit-learn==1.6.0
 vectorbt==0.26.2
 
 # --- 数据源（TP-02/采集 §3.1；AkShare 主 + Tushare 备 §2.15）---
-akshare==1.16.0
+akshare>=1.16.72
 tushare==1.4.16
 
 # --- AI / RAG（TP-06 AI 助手；C1 LLM key 待注入）---

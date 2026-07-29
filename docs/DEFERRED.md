@@ -54,4 +54,24 @@
 
 ---
 
+## D6 · AkShare 净值接口无累计/后复权净值
+
+- **发现来源**：P1-01a 落地时核实 AkShare 运行时接口。`fund_open_fund_info_em(symbol, indicator="单位净值走势")` 仅返回 `净值日期/单位净值/日增长率`，**无累计净值(acc_nav)、后复权净值(adj_nav)**；而详设§2.20.2 `navs` 表要求 `nav/acc_nav/adj_nav` 三字段(`adj_nav` NOT NULL)。
+- **性质**：数据源口径缺口(非算法口径问题)；AkShare 累计净值需用 `indicator="累计净值走势"` 另取，后复权净值需清洗层按分红复权计算(E3 红线相关)。
+- **当前处理**：适配器 `fetch_nav` 的 `acc_nav`/`adj_nav` 暂填 `None`(见 `infra/external/akshare_source.py`)；测试标注 D6。
+- **影响**：P1-01c 清洗+upsert 层需补：① 累计净值取 `累计净值走势`；② 后复权净值按分红调整计算(关联 E3 后复权净值红线)。`adj_nav` NOT NULL 约束在清洗层保证非空后再写入。
+- **建议处置时点**：P1-01c(清洗+upsert)落地时补全，属本采集链路内部闭环。
+
+---
+
+## D7 · funds 表字段与技术规格§3.2 DDL 不一致
+
+- **发现来源**：技术规格§3.2 `funds` DDL 含 `listing_board/scale/fee_rate/custodian/intraday_price/premium_discount`(DC-002 全类型/场内/折溢价)，但详设§2.20.2 `funds` 表无这些字段。
+- **性质**：两份设计文档口径不一致(详设§2.20.2 vs 技术规格§3.2)；按"详设+开发规范为准"原则(开发规范§0)，P0-04 以详设§2.20.2 建模。
+- **当前处理**：P0-04 模型按详设§2.20.2(无上述字段)；P1-01a 适配器 `fetch_fund_list` 仅映射 `code/name/type_`，未涉及 scale/fee_rate。
+- **影响**：DC-002 全类型/场内/折溢价功能(规模/费率/盘中价/折溢价)需补字段；不阻塞 P1-01a(名单拉取)。
+- **建议处置时点**：P1-02a/b(基金数据中心接口)落地 DC-002 全类型时，按技术规格§3.2 补字段迁移。
+
+---
+
 *更新约定：每解决一项，在对应条目末尾追加 `已解决 @ <commit>` 并保留条目用于回溯。*
