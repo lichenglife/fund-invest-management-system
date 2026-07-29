@@ -95,7 +95,7 @@
 
 ## 6. 接口与错误（强制）
 
-- 统一响应信封 `{code, message, data, source, as_of, trace_id}`（详细设计 §2.21）；成功 `code=0`，失败 `data=null`。
+- 统一响应信封 `{code, data, source, as_of, disclaimer, message, trace_id}`（详细设计 §2.21 / §5.2，7 字段）；`disclaimer` 默认"仅供参考，不构成投资建议"；成功 `code=0`，失败 `data=null`。
 - 错误码体系（§4.2）：`400xx` 参数/业务、`401xx` 认证、`403xx` 守卫、`429xx` 限流、`500xx` 内部、`503xx` 依赖（50301 数据源 / 50302 DB / 50303 LLM 降级）。
 - SLA（§4.3）：API P95 普通 ≤ 800ms、评估/筛选 ≤ 2s；错误率 < 1%；缓存命中 ≥ 80%。
 - 异常分层（开发规范 §8）：抛具体项目异常（禁裸 `Exception`），全局 handler 映射错误码；**禁止吞异常、禁止向用户泄露堆栈/SQL**。
