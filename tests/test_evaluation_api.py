@@ -152,3 +152,43 @@ class TestStyleboxEndpoint:
         resp = client_with_fund.get("/api/v1/funds/999999/stylebox")
         assert resp.status_code == 404
         assert resp.json()["code"] == 40002
+
+
+class TestAttributionEndpoint:
+    """GET /api/v1/funds/{code}/attribution(§3.3.8.2)。"""
+
+    def test_returns_envelope(self, client_with_fund: TestClient) -> None:
+        """Brinson 归因信封(混合基 scope=mixed)。"""
+        resp = client_with_fund.get("/api/v1/funds/000001/attribution")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "scope" in data
+        assert data["scope"] == "mixed"  # 混合基在 BRINSON_SCOPE
+        assert "unavailable" in data  # 基准缺失时 unavailable
+
+    def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
+        resp = client_with_fund.get("/api/v1/funds/999999/attribution")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
+
+
+class TestResearchEndpoint:
+    """GET /api/v1/funds/{code}/research(§3.3.7, PEG/ERP 代理)。"""
+
+    def test_returns_cards(self, client_with_fund: TestClient) -> None:
+        """研究卡片(PEG/ERP 代理标注)。"""
+        resp = client_with_fund.get("/api/v1/funds/000001/research")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "peg" in data
+        assert "erp" in data
+        assert "cards" in data
+        assert len(data["cards"]) >= 2  # 至少 PEG + ERP 卡
+        # 卡片 name 带"(代理)"(PEG/ERP)
+        names = [c["name"] for c in data["cards"]]
+        assert any("(代理)" in n for n in names)
+
+    def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
+        resp = client_with_fund.get("/api/v1/funds/999999/research")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002

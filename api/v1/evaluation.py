@@ -1,8 +1,10 @@
-"""评估引擎接口(P1-04a，详设§3.3.6 / §2.21 信封 / §3.3.7 溯源)。
+"""评估引擎接口(P1-04a/b，详设§3.3.6 / §2.21 信封 / §3.3.7 溯源)。
 
 - GET /api/v1/funds/{code}/metrics：核心指标(cv_flag 交叉验证)
 - GET /api/v1/funds/{code}/score：五因子评分(可调权重, ADR-002 唯一权威源)
 - GET /api/v1/funds/{code}/stylebox：风格箱(E13 权益类)
+- GET /api/v1/funds/{code}/attribution：Brinson 归因(仅 mixed/stock, §3.3.8.2)
+- GET /api/v1/funds/{code}/research：研究指标卡片(PEG/ERP 代理, §3.3.7)
 
 响应统一信封(§2.21)；数值带 source + as_of + cv_flag(§3.3.7)。
 基金不存在 -> 40002(§4.2)。
@@ -18,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_db
 from api.services.evaluation import EvaluationService
+from domain.research import research_metrics_cards
 from schemas.envelope import SOURCE_BATCH, SOURCE_REALTIME, Envelope
 from schemas.errors import NotFoundError
 
@@ -87,6 +90,41 @@ def get_stylebox(
         "note": "风格箱算法待实现(P1-03)" if size is None else None,
     }
     return Envelope.ok(data=data, source=SOURCE_REALTIME, as_of=date.today())
+
+
+@router.get("/funds/{code}/attribution", summary="Brinson 归因(§3.3.8.2, 仅 mixed/stock)")
+def get_attribution(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> Envelope[dict[str, Any]]:
+    """Brinson 业绩归因(仅主动股混基；指数->TE/IR；债基不显示, §3.3.8.2)。"""
+    svc = EvaluationService(db)
+    attr = svc.get_attribution(code)
+    if attr is None:
+        raise NotFoundError(f"基金不存在: {code}")
+    data: dict[str, Any] = attr.to_dict()
+    data["as_of"] = date.today().isoformat()
+    return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
+
+
+@router.get("/funds/{code}/research", summary="研究指标卡片(§3.3.7, PEG/ERP 代理)")
+def get_research(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+    rf_rate: float = Query(default=0.025, description="10Y 国债收益率(无风险利率)"),
+) -> Envelope[dict[str, Any]]:
+    """研究指标卡片(PEG/ERP 代理 + 阈值着色, §3.3.7 / 40301 守卫)。"""
+    svc = EvaluationService(db)
+    peg, erp = svc.get_research(code, rf_rate=rf_rate)
+    if not peg.available and peg.method == "fund_missing":
+        raise NotFoundError(f"基金不存在: {code}")
+    cards = research_metrics_cards(peg, erp)
+    data: dict[str, Any] = {
+        "peg": peg.to_dict(),
+        "erp": erp.to_dict(),
+        "cards": [c.to_dict() for c in cards],
+    }
+    return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
 
 
 def _parse_weights(weights_str: str | None) -> dict[str, int] | None:

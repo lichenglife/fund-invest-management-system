@@ -1,4 +1,4 @@
-"""评估服务层(P1-04a，详设§3.3 评估引擎 / §3.3.5 缓存 / §3.3.7 溯源)。
+"""评估服务层(P1-04a/b，详设§3.3 评估引擎 / §3.3.5 缓存 / §3.3.7 溯源)。
 
 从 DB 读 NAV/持仓，调 domain 算法层(metrics/scoring/attribution/research)，
 返回带 source/as_of/cv_flag 的结果(§3.3.7 溯源)。
@@ -12,14 +12,17 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import Any
 
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from domain.attribution import Attribution, brinson_attribution
 from domain.metrics import DEFAULT_EVAL_WINDOW, Metrics, compute_metrics
+from domain.research import ERPResult, ProxyResult, erp_proxy, peg_proxy
 from domain.scoring import Score, multi_factor_score
-from infra.db.models import Fund, Nav
+from infra.db.models import Fund, Holding, Nav
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +46,9 @@ class EvaluationService:
         return self.db.get(Fund, code)
 
     def load_nav_series(self, code: str, *, window: str = DEFAULT_EVAL_WINDOW) -> pd.Series:
-        """从 DB 读净值序列 -> pandas Series(index=trade_date, values=nav)。
+        """从 DB 读净值序列 -> pandas Series(index=trade_date, values=adj_nav)。
 
         用 adj_nav(后复权净值，E3 红线)；按 window 截取近 N 年。
-        Args:
-            code: 基金代码。
-            window: 评估窗口(默认 3Y)。
         """
         years = _parse_window_years(window)
         cutoff = date.today().replace(year=date.today().year - years)
@@ -63,15 +63,36 @@ class EvaluationService:
         values = [float(r.adj_nav) for r in rows if r.adj_nav is not None]
         return pd.Series(values, index=pd.to_datetime(dates))
 
+    def load_holdings(self, code: str) -> list[dict[str, Any]]:
+        """从 DB 读最新一期持仓 -> [{stock_code, stock_name, weight}]。"""
+        row = self.db.execute(
+            select(Holding.report_date)
+            .where(Holding.code == code)
+            .order_by(Holding.report_date.desc())
+            .limit(1)
+        ).first()
+        if row is None:
+            return []
+        rows = self.db.execute(
+            select(Holding.stock_code, Holding.stock_name, Holding.weight).where(
+                Holding.code == code, Holding.report_date == row.report_date
+            )
+        ).all()
+        return [
+            {
+                "stock": r.stock_code,
+                "stock_name": r.stock_name,
+                "weight": float(r.weight) if r.weight else 0.0,
+            }
+            for r in rows
+        ]
+
     # ------------------------------------------------------------------ 指标
 
     def get_metrics(
         self, code: str, *, window: str = DEFAULT_EVAL_WINDOW, benchmark: str | None = None
     ) -> Metrics | None:
-        """计算核心指标(§3.3.2 / P1-03a)。
-
-        基金不存在返 None(40002 由路由处理)；NAV 不足返 Metrics(全 None)。
-        """
+        """计算核心指标(§3.3.2 / P1-03a)。基金不存在返 None。"""
         fund = self.get_fund(code)
         if fund is None:
             return None
@@ -86,11 +107,7 @@ class EvaluationService:
     def get_score(
         self, code: str, *, weights: dict[str, int] | None = None, window: str = DEFAULT_EVAL_WINDOW
     ) -> Score | None:
-        """五因子评分(§3.3.8.1 / P1-03b)。
-
-        单基金查询无横截面 universe -> 子分可能 None(需批算提供 universe)。
-        MVP 阶段：universe 缺失时 scale 子分仍有效(非线性)，其余子分 None。
-        """
+        """五因子评分(§3.3.8.1 / P1-03b)。"""
         fund = self.get_fund(code)
         if fund is None:
             return None
@@ -104,17 +121,61 @@ class EvaluationService:
         """风格箱(size, value_growth)(§3.3.1 / 闭合 E13)。
 
         风格箱限权益类(详设 E13)；债/货/QDII 不显示。
-        > P1-03 阶段 stylebox 算法未实现(P1-04a 仅占位)；
-        > 返回 None 表示待实现，路由降级展示。
+        > P1-03 阶段 stylebox 算法未实现；返回 None 占位。
         """
         fund = self.get_fund(code)
         if fund is None:
             return None
-        # TODO(P1-03 风格箱): domain/stylebox.py 待实现(持仓法+收益回归交叉验证)
-        # 权益类返占位；非权益类不显示(E13)
         if fund.type_ in ("mixed", "stock", "index", "etf"):
             return (None, None)  # 占位：算法待实现
         return None  # 债/货/QDII 不显示(E13)
+
+    # ------------------------------------------------------------------ Brinson 归因(P1-03c)
+
+    def get_attribution(self, code: str) -> Attribution | None:
+        """Brinson 业绩归因(§3.3.8.2 / P1-03c)。
+
+        从 DB 读持仓构造 periods；基金不存在返 None。
+        > MVP：基准成分权重/收益暂缺，用持仓做单期近似(基准缺失标 unavailable)。
+        """
+        fund = self.get_fund(code)
+        if fund is None:
+            return None
+        hp = self.load_holdings(code)
+        # 构造单期(periods=[{w_p, R_p, R_b}]；基准暂缺 -> unavailable)
+        # 持仓权重用于 w_p；R_p/R_b 暂缺(需基准成分收益，P1-04b 后续补)
+        if not hp:
+            return brinson_attribution(
+                fund.type_,
+                periods=[],
+            )
+        # MVP 占位：持仓有但基准/收益缺失 -> unavailable
+        return brinson_attribution(
+            fund.type_,
+            periods=[{"w_p": {h["stock"]: h["weight"] for h in hp}, "R_p": {}, "R_b": {}}],
+        )
+
+    # ------------------------------------------------------------------ 研究指标(P1-03d)
+
+    def get_research(self, code: str, *, rf_rate: float = 0.025) -> tuple[ProxyResult, ERPResult]:
+        """PEG/ERP 代理 + 卡片(§3.3.7 / P1-03d)。
+
+        从 DB 读持仓喂 peg_proxy/erp_proxy；持仓缺失时 available=False。
+        rf_rate 默认 0.025(2.5%，10Y 国债近似)。
+        """
+        fund = self.get_fund(code)
+        if fund is None:
+            return ProxyResult(value=None, method="fund_missing", available=False), ERPResult(
+                available=False, method="fund_missing"
+            )
+        hp = self.load_holdings(code)
+        # 持仓无 pe/growth/ey 字段(DB holdings 表无) -> PEG/ERP available=False
+        # 完整实现需 P1-01 补个股 PE/增长数据采集(D2)
+        peg = peg_proxy(fund.type_, hp if hp else None, as_of=date.today().isoformat())
+        erp = erp_proxy(
+            fund.type_, hp if hp else None, rf_rate=rf_rate, as_of=date.today().isoformat()
+        )
+        return peg, erp
 
 
 def _parse_window_years(window: str) -> int:
@@ -127,11 +188,7 @@ def _parse_window_years(window: str) -> int:
 
 
 def _fund_type_to_asset_class(fund_type: str) -> str:
-    """基金 type -> 底层 asset_class(E5 分组维度)。
-
-    映射(详设§3.3.8.1 asset_class: equity/debt/money/alt/qdii)：
-    stock/mixed -> equity；bond -> debt；money -> money；qdii -> qdii；其余 alt。
-    """
+    """基金 type -> 底层 asset_class(E5 分组维度)。"""
     mapping = {
         "stock": "equity",
         "mixed": "equity",
