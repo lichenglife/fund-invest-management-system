@@ -81,6 +81,18 @@
 
 ---
 
+## D8 · empyrical 0.5 与 numpy 2.x 不兼容 + 因子命名口径冲突
+
+- **发现来源**：P1-03a 落地时。① empyrical 0.5.0 的 `sortino_ratio` 用 `np.NINF`（numpy 2.0 已删，降级 AttributeError）；② 技术规格§3.3 `metrics.py` 用因子名 `return/risk/perf/scale/manager` + 旧权重 `0.30/0.25/0.20/0.15/0.10`，与详设§3.3.8.1（E4/E5 闭环，权威）+ CLAUDE.md §4 红线的 `ret/risk/perf/scale/manager` + `20/25/20/15/20` 冲突。
+- **性质**：① 依赖兼容（empyrical 未适配 numpy 2.x）；② 文档口径（技术规格是 E4/E5 修订前基线，同 D3）。
+- **当前处理**（P1-03a）：
+  - sortino 自实现（`domain/metrics.py _sortino`，年化下行风险法），其余 empyrical 函数（annual_return/sharpe/max_drawdown/calmar/volatility）在 numpy 2 下正常。
+  - 因子命名/权重**以详设§3.3.8.1 + CLAUDE.md §4 红线为准**（`ret/risk/perf/scale/manager`，20/25/20/15/20）；技术规格 metrics.py 旧口径属修订前基线，待 P1-03b 五因子合成时统一。
+- **影响**：sortino 自实现非 empyrical 标准实现（语义一致，实现细节略异）；因子命名以红线为准。
+- **建议处置时点**：empyrical 升级适配 numpy 2.x 后可换回 `ep.sortino_ratio`；技术规格§3.3 因子命名随 D3 一并修订。
+
+---
+
 *更新约定：每解决一项，在对应条目末尾追加 `已解决 @ <commit>` 并保留条目用于回溯。*
 
 ---
@@ -96,5 +108,6 @@
 | D5 · 宿主端口避让 | 📌 环境事实已处理 | docker-compose 端口避让，无仓库变更 | - |
 | D6 · acc_nav/adj_nav 口径 | 🔄 部分解决 | acc_nav 已补(P1-01c)；adj_nav 临时回退 acc_nav，待 TP-04 分红复权 | P1-01c |
 | D7 · funds 表字段不一致 | 📌 延期 | 按详设§2.20.2 建模；DC-002 全类型待 P1-02 补字段 | - |
+| D8 · empyrical/numpy兼容+因子命名 | 🔄 部分解决 | sortino 自实现；因子命名以红线为准，待 P1-03b 统一 | P1-03a |
 
 > 注：本文件原以非 UTF-8 编码入库，本次重写为标准 UTF-8。
