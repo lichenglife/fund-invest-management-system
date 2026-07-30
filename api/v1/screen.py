@@ -66,20 +66,48 @@ def screen(
     return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
 
 
-@router.get("/screen/dedup", summary="相似去重(占位, P1-06c)")
+@router.get("/screen/dedup", summary="相似去重(§3.4.7, 重叠>=70%)")
 def screen_dedup(
     db: Annotated[Session, Depends(get_db)],
     codes: str = "000001,000002",
 ) -> Envelope[dict[str, Any]]:
-    """相似去重(重叠>=70% 提示, P1-06c 待实现)。"""
-    _ = db
+    """持仓相似去重(前十大重叠 Jaccard>=0.70 提示高度雷同, §3.4.7 / DC-004)。"""
+    from domain.screen import similarity_dedup
+
     code_list = [c.strip() for c in codes.split(",") if c.strip()]
-    data: dict[str, Any] = {
-        "codes": code_list,
-        "available": False,
-        "note": "相似去重算法待实现(P1-06c)",
-    }
-    return Envelope.ok(data=data, source=SOURCE_REALTIME, as_of=date.today())
+    # 从 DB 读各基金最新持仓
+    holdings_map: dict[str, list[dict[str, Any]]] = {}
+    for code in code_list:
+        holdings_map[code] = _load_holdings(db, code)
+    result = similarity_dedup(holdings_map)
+    data = result.to_dict()
+    data["codes"] = code_list
+    data["available"] = any(holdings_map.values())
+    return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
+
+
+def _load_holdings(db: Session, code: str) -> list[dict[str, Any]]:
+    """从 DB 读最新一期持仓(前十大,复用 EvaluationService 逻辑)。"""
+    from sqlalchemy import select
+
+    from infra.db.models import Holding
+
+    row = db.execute(
+        select(Holding.report_date)
+        .where(Holding.code == code)
+        .order_by(Holding.report_date.desc())
+        .limit(1)
+    ).first()
+    if row is None:
+        return []
+    rows = db.execute(
+        select(Holding.stock_code, Holding.weight).where(
+            Holding.code == code, Holding.report_date == row.report_date
+        )
+    ).all()
+    return [
+        {"stock_code": r.stock_code, "weight": float(r.weight) if r.weight else 0.0} for r in rows
+    ]
 
 
 class NLParsePayload(BaseModel):

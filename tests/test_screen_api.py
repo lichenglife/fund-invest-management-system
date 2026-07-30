@@ -195,10 +195,12 @@ class TestScreenEndpoint:
 
 
 class TestScreenDedupEndpoint:
-    """GET /api/v1/screen/dedup(占位, P1-06c)。"""
+    """GET /api/v1/screen/dedup(§3.4.7, 重叠>=70%)。"""
 
-    def test_placeholder(self, client_with_funds: TestClient) -> None:
+    def test_dedup_no_holdings(self, client_with_funds: TestClient) -> None:
+        """无持仓数据 -> available=False。"""
         resp = client_with_funds.get("/api/v1/screen/dedup?codes=000001,000002")
         assert resp.status_code == 200
         data = resp.json()["data"]
-        assert data["available"] is False  # 待实现
+        assert data["available"] is False  # 无持仓
+        assert data["similar_count"] == 0

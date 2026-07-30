@@ -189,10 +189,97 @@ def _sort_column(field: str) -> Any:
     return Fund.code  # 默认
 
 
+# ---------------------------------------------------------------------------
+# 相似去重(P1-06c，§3.4.7 / 技术规格 similarity_dedup)
+# ---------------------------------------------------------------------------
+
+#: 去重阈值(§3.4.7)。
+SIMILARITY_OVERLAP = 0.70  # 前十大重叠
+SIMILARITY_CORR = 0.90  # 收益相关性
+
+
+@dataclass(frozen=True)
+class DedupPair:
+    """单对去重结果。"""
+
+    code_a: str
+    code_b: str
+    overlap: float
+    is_similar: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "code_a": self.code_a,
+            "code_b": self.code_b,
+            "overlap": self.overlap,
+            "is_similar": self.is_similar,
+        }
+
+
+@dataclass(frozen=True)
+class DedupResult:
+    """去重结果(§3.4.7 / 技术规格 DedupResult)。"""
+
+    pairs: list[DedupPair] = field(default_factory=list)
+    similar_count: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "pairs": [p.to_dict() for p in self.pairs],
+            "similar_count": self.similar_count,
+            "overlap_threshold": SIMILARITY_OVERLAP,
+        }
+
+
+def similarity_dedup(
+    holdings_map: dict[str, list[dict[str, Any]]],
+    *,
+    overlap_threshold: float = SIMILARITY_OVERLAP,
+) -> DedupResult:
+    """持仓相似去重(§3.4.7 / DC-004)。
+
+    前十大重叠 Jaccard(交集/并集)；超阈值(0.70)提示"高度雷同"。
+
+    Args:
+        holdings_map: {code: [{stock_code, weight}]} 前十大持仓。
+        overlap_threshold: 重叠阈值(默认 0.70)。
+    Returns:
+        DedupResult(pairs 含重叠率与 is_similar 标记)。
+    """
+    codes = list(holdings_map.keys())
+    if len(codes) < 2:
+        return DedupResult()
+
+    # 各基金前十大股票集合
+    stock_sets: dict[str, set[str]] = {
+        code: {h["stock_code"] for h in holdings if h.get("stock_code")}
+        for code, holdings in holdings_map.items()
+    }
+
+    pairs: list[DedupPair] = []
+    similar_count = 0
+    for i, a in enumerate(codes):
+        for b in codes[i + 1 :]:
+            set_a, set_b = stock_sets[a], stock_sets[b]
+            union = set_a | set_b
+            overlap = len(set_a & set_b) / len(union) if union else 0.0  # Jaccard
+            is_sim = overlap >= overlap_threshold
+            pairs.append(DedupPair(a, b, overlap, is_sim))
+            if is_sim:
+                similar_count += 1
+
+    return DedupResult(pairs=pairs, similar_count=similar_count)
+
+
 __all__: list[str] = [
     "SCREEN_CACHE_TTL",
     "SUPPORTED_OPS",
     "ScreenRequest",
     "ScreenResult",
+    "SIMILARITY_OVERLAP",
+    "SIMILARITY_CORR",
+    "DedupPair",
+    "DedupResult",
+    "similarity_dedup",
     "real_time_screen",
 ]
