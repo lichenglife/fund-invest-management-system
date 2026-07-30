@@ -26,7 +26,7 @@ def _factor_bar(name: str, sub_score: float, weight: float, raw: float, contrib:
     label = f"{meta['name']} {int(weight * 100)}%"
     raw_str = utils.format_pct(raw) if name in ("ret", "risk") else f"{raw:g}"
     st.markdown(
-        f'<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7785">'
+        f'<div style="display:flex;justify-content:space-between;font-size:12px;color:#6B7280">'
         f"<span>{label}</span><span>{raw_str} · 贡献 {contrib:g}</span></div>",
         unsafe_allow_html=True,
     )
@@ -47,7 +47,7 @@ def render(score: dict[str, Any], allow_tune: bool = True) -> float:
         composite = utils.weighted_composite(factors, weights)
         st.markdown(
             f'<div style="font-size:34px;font-weight:800;color:{utils.COLOR_GREEN}">'
-            f'{composite:g}<span style="font-size:14px;color:#6b7785">/100</span></div>',
+            f'{composite:g}<span style="font-size:14px;color:#6B7280">/100</span></div>',
             unsafe_allow_html=True,
         )
         for name in ("ret", "risk", "perf", "scale", "manager"):

@@ -19,6 +19,7 @@ if _REPO_ROOT not in sys.path:
 import streamlit as st  # noqa: E402
 
 from app.api_client import health, is_mock  # noqa: E402
+from app.components.ui import inject_global_style, page_header  # noqa: E402
 from app.utils import mock_badge, status_badge  # noqa: E402
 
 
@@ -26,7 +27,14 @@ def render_topbar() -> None:
     """顶部栏：系统名 + 角色切换 + 数据截至(原型§2)。"""
     cols = st.columns([6, 2, 2])
     with cols[0]:
-        st.markdown("### 📈 FundLens · 基金学习利器")
+        st.markdown(
+            '<div style="display:flex;align-items:center;gap:10px">'
+            '<span style="font-size:1.6rem">📈</span>'
+            '<span style="font-size:1.3rem;font-weight:800;color:#0A6B4A">FundLens</span>'
+            '<span style="color:#6B7280;font-size:0.95rem">· 基金学习利器</span>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
     with cols[1]:
         # key="role" 的 selectbox 自动持久化到 session_state，无需再显式 set
         st.selectbox("角色", ["学习者", "评估者", "交易者"], key="role")
@@ -56,13 +64,14 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="expanded",
     )
+    inject_global_style()
     render_topbar()
     render_status()
 
     st.divider()
-    st.markdown("#### 欢迎使用 FundLens")
-    st.markdown(
-        "覆盖 **学 -> 懂 -> 筛 -> 练 -> 评 -> 穿** 12 个功能模块。" "请从左侧导航选择模块进入。"
+    page_header(
+        "欢迎使用 FundLens",
+        "覆盖 学 -> 懂 -> 筛 -> 练 -> 评 -> 穿 12 个功能模块 · 从左侧导航选择模块进入",
     )
 
     with st.container(border=True):

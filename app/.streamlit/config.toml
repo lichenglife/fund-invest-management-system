@@ -1,10 +1,11 @@
 # Streamlit 主题与配置(开发规范§10.4 设计令牌；原型§5 金融翠绿专业风)
+# 色值与 app/static/style.css 权威源对齐(主色墨绿 #0A6B4A)。
 
 [theme]
-primaryColor = "#0f9d76"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f5f7fa"
-textColor = "#1f2937"
+primaryColor = "#0A6B4A"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0FDF4"
+textColor = "#374151"
 font = "sans serif"
 
 [server]

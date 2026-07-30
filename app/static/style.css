@@ -1,0 +1,360 @@
+/* =====================================================================
+ * FundLens 全局样式 · 金融翠绿专业风(原型§5 设计令牌)
+ *
+ * 设计令牌为单一权威源；app/utils.py 颜色常量、.streamlit/config.toml 主题色
+ * 均对齐本文件色值。红色(#E23B3B)仅用于亏损/风险数值，禁止用于 active/selected。
+ *
+ * 注入方式见 app/components/ui.py:inject_global_style()(读本文件注入 st.markdown)。
+ * ===================================================================== */
+
+:root {
+  /* --- 品牌主色(仅用于品牌 / 收益 / 选中态) --- */
+  --brand-deep: #0A6B4A;          /* 墨绿：品牌主色、active 底 */
+  --brand: #16A34A;              /* 翠绿：收益正、选中态高亮 */
+  --brand-bg: #F0FDF4;           /* 浅绿背景：选中态柔光底、卡片点缀 */
+
+  /* --- 功能色 --- */
+  --warn-bg: #FEF9C3;            /* 浅黄：提示/中性 */
+  --warn-fg: #B45309;            /* 警告文字(琥珀) */
+  --info-bg: #DBEAFE;            /* 浅蓝：信息提示 */
+  --info-fg: #1D4ED8;             /* 信息文字 */
+  --danger: #E23B3B;             /* 红：仅亏损/风险数值，禁用于 active */
+  --danger-bg: #FDE8E8;          /* 红底：风险药丸 */
+
+  /* --- 文字 --- */
+  --text-title: #111827;         /* 标题 */
+  --text-body: #374151;          /* 正文 */
+  --text-muted: #6B7280;         /* 次要 */
+
+  /* --- 卡片 --- */
+  --card-bg: #FFFFFF;
+  --card-border: #E5E7EB;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+/* =====================================================================
+ * 布局：主体全宽、收紧 padding(消除菜单与内容的过大间距)
+ * ===================================================================== */
+.st-main,
+.st-main > section,
+.st-emmain,
+.st-emmain > section {
+  max-width: 100% !important;
+  padding-left: 1.2rem !important;
+  padding-right: 1.2rem !important;
+}
+.block-container {
+  max-width: 100% !important;
+  padding-top: 2rem !important;
+  padding-left: 1.4rem !important;
+  padding-right: 1.4rem !important;
+}
+[data-testid="stSidebarCollapsedControl"] {
+  margin-left: 0 !important;
+}
+
+/* =====================================================================
+ * 字体：标题与正文层次
+ * ===================================================================== */
+h1 {
+  font-size: 2.0rem !important;
+  margin-bottom: 0.2rem !important;
+  color: var(--text-title);
+}
+h2 {
+  font-size: 1.6rem !important;
+  color: var(--text-title);
+}
+h3 {
+  font-size: 1.25rem !important;
+  color: var(--text-title);
+}
+body,
+.stApp {
+  color: var(--text-body);
+}
+[data-testid="stMetricValue"] {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+}
+[data-testid="stHorizontalBlock"] {
+  gap: 0.8rem !important;
+}
+.stDataFrame,
+.stTable,
+.stVegaLiteChart {
+  width: 100% !important;
+}
+
+/* =====================================================================
+ * 侧栏(sidebar)：品牌区 + 导航分组 + 当前页品牌绿高亮
+ *
+ * 修复：sidebar 顶部默认显示入口目录名「app」调试文字，用品牌 logo 区覆盖。
+ * active 菜单用品牌墨绿底白字，禁止红色。
+ * ===================================================================== */
+[data-testid="stSidebar"] {
+  background: linear-gradient(180deg, var(--brand-deep) 0%, var(--brand) 96px, #ffffff 96px) !important;
+}
+
+/* 隐藏 Streamlit 默认 sidebar header(入口目录名「app」调试文字) */
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] header,
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"],
+[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
+  display: none !important;
+}
+
+/* 侧栏顶部品牌 logo 区(渐变绿底白字) */
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"]::before,
+[data-testid="stSidebar"] .block-container::before {
+  content: "📈 FundLens · 基金学习利器";
+  display: block;
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.2rem 0 1rem 0.2rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+[data-testid="stSidebar"] .block-container {
+  padding-top: 0.8rem !important;
+}
+
+/* 导航项：圆角、间距 */
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
+  border-radius: var(--radius-sm);
+  margin: 2px 0;
+  padding: 8px 12px !important;
+  font-size: 0.95rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+/* 默认导航文字色 */
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] button,
+[data-testid="stSidebar"] .stPageLink a {
+  color: var(--text-body) !important;
+}
+
+/* 当前激活页(active)：品牌墨绿底 + 白字 + 左侧色条，禁止红色 */
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"],
+[data-testid="stSidebar"] .stPageLink-NavLink-active,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] button[aria-pressed="true"] {
+  background: var(--brand-deep) !important;
+  color: #ffffff !important;
+  border-left: 3px solid var(--brand);
+}
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"] button,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] button[aria-pressed="true"] span {
+  color: #ffffff !important;
+}
+
+[data-testid="stSidebar"] section[data-testid="stSidebarNav"] {
+  padding: 0 0.5rem;
+}
+
+/* =====================================================================
+ * panel 标题色条(原型 .panel h3 + 左侧色带)
+ * ===================================================================== */
+.fl-panel-title {
+  border-left: 4px solid var(--brand);
+  padding-left: 10px;
+  margin: 6px 0 10px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+/* =====================================================================
+ * 页面表头色带
+ * ===================================================================== */
+.fl-page-header {
+  border-left: 6px solid var(--brand);
+  padding: 4px 0 6px 14px;
+  margin-bottom: 0.6rem;
+}
+.fl-page-header .fl-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--brand-deep);
+  line-height: 1.2;
+}
+.fl-page-header .fl-sub {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* =====================================================================
+ * Warning banner(原型① 顶部示例数据提示)
+ * 浅黄底 + 左侧图标 + 正文，图标与文字垂直居中(flex)
+ * ===================================================================== */
+.fl-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--warn-bg);
+  border: 1px solid #FDE68A;
+  border-left: 4px solid var(--warn-fg);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin: 10px 0 6px 0;
+}
+.fl-warning-banner .fl-wb-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.fl-warning-banner .fl-wb-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #92400E;
+  line-height: 1.4;
+}
+
+/* =====================================================================
+ * KPI 卡(原型① FR-D1)：圆角白底 + 标签 + 大数值(正绿负红) + 周期小标签
+ * ===================================================================== */
+.fl-kpi-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  margin-bottom: 4px;
+}
+.fl-kpi-card .fl-kpi-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.fl-kpi-card .fl-kpi-value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin-top: 4px;
+  line-height: 1.2;
+}
+.fl-kpi-card .fl-kpi-value.pos {
+  color: var(--brand);
+}
+.fl-kpi-card .fl-kpi-value.neg {
+  color: var(--danger);
+}
+.fl-kpi-card .fl-kpi-period {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* =====================================================================
+ * 榜单工具栏：数据截至 + 示例数据 badge(顶部右侧)
+ * ===================================================================== */
+.fl-table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.fl-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.fl-badge.mock {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border: 1px solid #FDE68A;
+}
+.fl-badge.as-of {
+  background: var(--brand-bg);
+  color: var(--brand-deep);
+  border: 1px solid #BBF7D0;
+}
+
+/* =====================================================================
+ * 榜单区标题与 Tab 间距 + Tab 选中态(品牌绿下划线 2px)/hover(浅绿底)
+ * ===================================================================== */
+.fl-section-title {
+  margin: 14px 0 10px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+.fl-tabs-wrap {
+  margin-top: 4px;
+}
+.stTabs [data-baseweb="tab-list"] {
+  gap: 4px;
+  border-bottom: 1px solid var(--card-border);
+}
+.stTabs [data-baseweb="tab"] {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 8px 16px;
+  transition: background 0.15s;
+}
+.stTabs [data-baseweb="tab"]:hover {
+  background: var(--brand-bg);
+}
+.stTabs [data-baseweb="tab-highlight"] {
+  background-color: var(--brand) !important;
+  height: 2px !important;
+}
+.stTabs [data-baseweb="tab-border"] {
+  display: none;
+}
+.stTabs [aria-selected="true"] {
+  color: var(--brand-deep) !important;
+  font-weight: 600;
+}
+
+/* =====================================================================
+ * 榜单表格 st.dataframe 容器：表头品牌绿、容器圆角阴影
+ * 注：Streamlit 1.41 的 st.dataframe 为 canvas 网格，行级斑马/hover 不适用；
+ *     此处对 HTML 表头与容器边框统一视觉。rank 窄/code 等宽见 column_config。
+ * ===================================================================== */
+[data-testid="stDataFrame"] {
+  border-radius: var(--radius) !important;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+[data-testid="stDataFrame"] [data-testid="stDataFrameResizable"] {
+  border-radius: var(--radius) !important;
+}
+
+/* =====================================================================
+ * metric 卡片(白底 + 细阴影 + 圆角 12px + 顶色条)
+ * ===================================================================== */
+[data-testid="stMetric"] {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 3px solid var(--brand);
+  border-radius: var(--radius);
+  padding: 12px 14px !important;
+  box-shadow: var(--shadow);
+}
+
+/* Streamlit container(border) 圆角阴影统一 */
+[data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+/* =====================================================================
+ * 通用按钮：主按钮品牌墨绿(选中态品牌色，禁用红)
+ * ===================================================================== */
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="stBaseButton-primary"] {
+  background-color: var(--brand-deep) !important;
+  border-color: var(--brand-deep) !important;
+  color: #ffffff !important;
+}
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="stBaseButton-primary"]:hover {
+  background-color: var(--brand) !important;
+  border-color: var(--brand) !important;
+}

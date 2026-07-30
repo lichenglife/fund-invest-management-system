@@ -15,6 +15,16 @@ _ROWS = ["大盘", "中盘", "小盘"]
 _COLS = ["价值", "平衡", "成长"]
 
 
+def _matches_current(row: str, col: str, current: str) -> bool:
+    """当前定位 token 是否命中「行市值+列风格」格(原型③⑥ 九宫格高亮)。
+
+    用子串匹配，兼容 ``中盘成长``(无空格，store.FUNDS 取值)与 ``中盘 成长``(带空格，
+    页面默认传参)两种写法；避免 ``split()`` 把无空格 token 当成单元素、cur_row 取到
+    整串而 cur_col 为空，导致当前格永不高亮。
+    """
+    return bool(row) and bool(col) and row in current and col in current
+
+
 def render(current: str = "中盘成长", cv_ok: bool = True, manager: bool = False) -> None:
     """渲染九宫格风格箱。
 
@@ -26,9 +36,7 @@ def render(current: str = "中盘成长", cv_ok: bool = True, manager: bool = Fa
     title = "基金经理风格箱" if manager else "风格箱"
     tag = "DC-002 F" if manager else "BR-2.3 · 持仓+回归交叉验证"
     with panel(title, tag=tag):
-        cur_parts = current.split()
-        cur_row = cur_parts[0] if len(cur_parts) > 0 else ""
-        cur_col = cur_parts[1] if len(cur_parts) > 1 else ""
+        # 当前格定位用 _matches_current 子串匹配(见该函数)，无需 split 解析。
 
         # 表头
         hdr = st.columns([1, 1, 1, 1])
@@ -40,18 +48,18 @@ def render(current: str = "中盘成长", cv_ok: bool = True, manager: bool = Fa
             cols = st.columns([1, 1, 1, 1])
             cols[0].markdown(f"**{row}**")
             for c, name in zip(cols[1:], _COLS, strict=False):
-                is_cur = row == cur_row and name == cur_col
+                is_cur = _matches_current(row, name, current)
                 if is_cur:
                     c.markdown(
-                        f'<div style="background:#eaf5f0;border:2px solid #0f9d76;'
+                        f'<div style="background:#F0FDF4;border:2px solid #16A34A;'
                         f"border-radius:6px;padding:8px;text-align:center;font-weight:700;"
-                        f'color:#0b7d5c">{row}{name}</div>',
+                        f'color:#0A6B4A">{row}{name}</div>',
                         unsafe_allow_html=True,
                     )
                 else:
                     c.markdown(
-                        '<div style="background:#fafbfc;border:1px solid #e3e8ef;'
-                        'border-radius:6px;padding:8px;text-align:center;color:#6b7785">'
+                        '<div style="background:#F9FAFB;border:1px solid #E5E7EB;'
+                        'border-radius:6px;padding:8px;text-align:center;color:#6B7280">'
                         "—</div>",
                         unsafe_allow_html=True,
                     )

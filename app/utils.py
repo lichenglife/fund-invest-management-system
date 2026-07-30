@@ -8,13 +8,14 @@ from __future__ import annotations
 
 from typing import Any, SupportsFloat
 
-#: 设计令牌色(原型§5 金融翠绿专业风；与 .streamlit/config.toml 主题对齐)。
-COLOR_GREEN = "#0f9d76"
-COLOR_GREEN_D = "#0b7d5c"
-COLOR_BLUE = "#2563eb"
-COLOR_RED = "#e23b3b"
-COLOR_AMBER = "#b9770a"
-COLOR_GRAY = "#6b7785"
+#: 设计令牌色(原型§5 金融翠绿专业风；与 app/static/style.css 权威源对齐)。
+#: 主色墨绿/翠绿仅用于品牌、收益、选中态；红仅用于亏损/风险数值，禁用于 active。
+COLOR_GREEN_D = "#0A6B4A"  # 墨绿：品牌主色(对齐 style.css --brand-deep)
+COLOR_GREEN = "#16A34A"  # 翠绿：收益正/选中态高亮(对齐 style.css --brand)
+COLOR_BLUE = "#1D4ED8"  # 信息蓝
+COLOR_RED = "#E23B3B"  # 红：仅亏损/风险数值
+COLOR_AMBER = "#B45309"  # 琥珀：警告
+COLOR_GRAY = "#6B7280"  # 次要文字
 
 #: level -> hex(原型 .rcard good/warn/bad 着色)。
 LEVEL_COLOR: dict[str, str] = {
@@ -89,6 +90,20 @@ def level_emoji(level: str) -> str:
         "warn": "🟡",
         "bad": "🔴",
     }.get(level, "⚪")
+
+
+def level_row(level: str) -> str:
+    """诊断状态列文本(原型⑥ diag-r/y/g)：emoji + 中文标签。"""
+    label = {
+        "good": "正面",
+        "ok": "安全",
+        "warn": "中性",
+        "bad": "负面",
+        "g": "均衡",
+        "y": "偏低",
+        "r": "风险",
+    }.get(level, "")
+    return f"{level_emoji(level)} {label}"
 
 
 def color_text(text: str, color: str) -> str:
