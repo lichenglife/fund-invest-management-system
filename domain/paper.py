@@ -106,10 +106,35 @@ def run_dividend(
     }
 
 
+def breakeven_gain(loss_pct: float) -> dict[str, Any]:
+    """回本需涨测算(§3.5.2 / FR-18 / DC-011)。
+
+    公式：``回本需涨 = |r| / (1 + r)``，r 为亏损率(负值)。
+    例：亏 10%(r=-0.10) -> 需涨 0.10/0.90 = 11.11%。
+
+    Args:
+        loss_pct: 持仓亏损率(负值，如 -0.10)；正值(盈利)返 0。
+    Returns:
+        {loss_pct, breakeven_gain_pct, note}；r<=-1(净值归零)返 None(§4 不崩溃)。
+    """
+    if loss_pct >= 0:
+        return {"loss_pct": loss_pct, "breakeven_gain_pct": 0.0, "note": "未亏损，无需回本"}
+    if loss_pct <= -1.0:
+        # 净值归零，回本需涨无穷(§4 红线：极值不崩溃)
+        return {"loss_pct": loss_pct, "breakeven_gain_pct": None, "note": "净值归零，无法回本"}
+    gain = abs(loss_pct) / (1.0 + loss_pct)
+    return {
+        "loss_pct": loss_pct,
+        "breakeven_gain_pct": gain,
+        "note": f"亏损 {loss_pct * 100:.1f}%，需涨 {gain * 100:.2f}% 回本",
+    }
+
+
 __all__: list[str] = [
     "REDEEM_FEE_BY_HOLD",
     "DEF_REDEEM_FEE",
     "redeem_fee",
     "final_value",
     "run_dividend",
+    "breakeven_gain",
 ]

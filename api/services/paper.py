@@ -369,6 +369,36 @@ class PaperTradingService:
             "new_shares": float(result["new_shares"]),
         }
 
+    # ------------------------------------------------------------------ 回本测算(P1-07c)
+
+    def get_breakeven(self, code: str, *, account_id: str = DEFAULT_ACCOUNT_ID) -> dict[str, Any]:
+        """回本测算(§3.5.2 / FR-18 / DC-011)。
+
+        从持仓算当前亏损率(成本 vs 最新净值) -> 回本需涨 |r|/(1+r)。
+        Raises:
+            NotFoundError: 持仓或净值不存在。
+        """
+        from domain.paper import breakeven_gain
+
+        position = self._get_position(account_id, code)
+        if position is None:
+            raise NotFoundError(f"无持仓: {code}")
+        # 取最新净值
+        nav_row = self.db.execute(
+            select(Nav.nav).where(Nav.code == code).order_by(Nav.trade_date.desc()).limit(1)
+        ).first()
+        if nav_row is None or nav_row.nav is None:
+            raise NotFoundError(f"基金 {code} 无可用净值")
+        latest_nav = Decimal(str(nav_row.nav))
+        # 亏损率 = (最新净值 - 成本) / 成本(负值表亏损)
+        loss_pct = float((latest_nav - position.cost) / position.cost) if position.cost > 0 else 0.0
+        result = breakeven_gain(loss_pct)
+        result["code"] = code
+        result["cost"] = float(position.cost)
+        result["latest_nav"] = float(latest_nav)
+        result["shares"] = float(position.shares)
+        return result
+
     # ------------------------------------------------------------------ 内部
 
     def _upsert_position(

@@ -384,3 +384,31 @@ class TestSellRedeemFee:
         data = resp.json()["data"]
         assert "redeem_fee" in data  # 赎回费字段
         assert "settled_amount" in data  # 扣费后到账
+
+
+class TestBreakevenEndpoint:
+    """GET /api/paper/breakeven 回本测算(§3.5.2 / FR-18)。"""
+
+    def test_breakeven_with_position(self, client_with_account: TestClient) -> None:
+        """有持仓 -> 返回回本需涨。"""
+        # 买入(成本=1.014)后，用更低的净值日查询 -> 亏损
+        client_with_account.post(
+            "/api/v1/paper/buy",
+            json={
+                "code": "000001",
+                "shares": "1000",
+                "trade_date": "2025-01-15",  # nav=1.014
+            },
+        )
+        resp = client_with_account.get("/api/v1/paper/breakeven?code=000001")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "breakeven_gain_pct" in data
+        assert "loss_pct" in data
+        assert data["code"] == "000001"
+
+    def test_breakeven_no_position(self, client_with_account: TestClient) -> None:
+        """无持仓 -> 40002。"""
+        resp = client_with_account.get("/api/v1/paper/breakeven?code=000001")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002

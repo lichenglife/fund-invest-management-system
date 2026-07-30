@@ -116,4 +116,16 @@ def dividend(
     return Envelope.ok(data=result, source=SOURCE_REALTIME, as_of=date.today())
 
 
+@router.get("/breakeven", summary="回本测算(§3.5.2, FR-18/DC-011)")
+def breakeven(
+    db: Annotated[Session, Depends(get_db)],
+    code: str = Query(description="基金代码"),
+    account_id: str = Query(default="default", description="账户 ID"),
+) -> Envelope[dict[str, Any]]:
+    """回本测算：持仓亏损率 -> 回本需涨 |r|/(1+r)(§3.5.2 / FR-18)。"""
+    svc = PaperTradingService(db)
+    result = svc.get_breakeven(code, account_id=account_id)
+    return Envelope.ok(data=result, source=SOURCE_REALTIME, as_of=date.today())
+
+
 __all__: list[str] = ["router"]

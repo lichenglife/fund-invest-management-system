@@ -1,6 +1,6 @@
-"""分红复权与赎回费单测(P1-07b，§3.5.4 / TP-04 / E3 红线)。
+"""分红复权与赎回费单测(P1-07b/c，§3.5.4 / TP-04 / E3 红线 / FR-18)。
 
-纯逻辑：run_dividend 份额调整、redeem_fee 阶梯、final_value 扣费。
+纯逻辑：run_dividend 份额调整、redeem_fee 阶梯、final_value 扣费、breakeven_gain 回本。
 """
 
 from __future__ import annotations
@@ -9,7 +9,14 @@ from decimal import Decimal
 
 import pytest
 
-from domain.paper import DEF_REDEEM_FEE, REDEEM_FEE_BY_HOLD, final_value, redeem_fee, run_dividend
+from domain.paper import (
+    DEF_REDEEM_FEE,
+    REDEEM_FEE_BY_HOLD,
+    breakeven_gain,
+    final_value,
+    redeem_fee,
+    run_dividend,
+)
 
 
 class TestRedeemFee:
@@ -83,3 +90,33 @@ class TestRunDividend:
         r = run_dividend(Decimal("500"), Decimal("0.05"), Decimal("2.0"), mode="reinvest")
         assert r["cash_dividend"] == Decimal("25.0")  # 500 * 0.05
         assert r["new_shares"] == Decimal("12.5")  # 25 / 2.0
+
+
+class TestBreakevenGain:
+    """§3.5.2 / FR-18 回本需涨 = |r|/(1+r)。"""
+
+    def test_loss_10pct(self) -> None:
+        """亏 10% -> 需涨 11.11%。"""
+        r = breakeven_gain(-0.10)
+        assert r["breakeven_gain_pct"] == pytest.approx(0.1111, abs=0.001)
+
+    def test_loss_50pct(self) -> None:
+        """亏 50% -> 需涨 100%。"""
+        r = breakeven_gain(-0.50)
+        assert r["breakeven_gain_pct"] == pytest.approx(1.0)
+
+    def test_profit_returns_zero(self) -> None:
+        """盈利 -> 需涨 0。"""
+        r = breakeven_gain(0.05)
+        assert r["breakeven_gain_pct"] == 0.0
+
+    def test_zero_loss(self) -> None:
+        """不亏不盈 -> 0。"""
+        r = breakeven_gain(0.0)
+        assert r["breakeven_gain_pct"] == 0.0
+
+    def test_total_loss_no_crash(self) -> None:
+        """净值归零(r<=-1) -> 不崩溃(§4 红线)。"""
+        r = breakeven_gain(-1.0)
+        assert r["breakeven_gain_pct"] is None
+        assert "无法回本" in r["note"]
