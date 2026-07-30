@@ -14,13 +14,14 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any
 
+import pandas as pd
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
 from api.services.paper import PaperTradingService
-from schemas.envelope import SOURCE_REALTIME, Envelope
+from schemas.envelope import SOURCE_BATCH, SOURCE_REALTIME, Envelope
 from schemas.paper import BuyRequest, ResetRequest, SellRequest
 
 router = APIRouter(prefix="/paper", tags=["paper"])
@@ -126,6 +127,60 @@ def breakeven(
     svc = PaperTradingService(db)
     result = svc.get_breakeven(code, account_id=account_id)
     return Envelope.ok(data=result, source=SOURCE_REALTIME, as_of=date.today())
+
+
+class DcaBacktestRequest(BaseModel):
+    """POST /api/paper/dca-backtest 定投回测(§3.5.8 / TP-04)。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(description="基金代码")
+    freq: str = Field(default="monthly", description="频率(weekly/monthly/quarterly)")
+    amount: float = Field(default=1000.0, description="每期金额(元)")
+    start: str | None = Field(default=None, description="起始日期(YYYY-MM-DD)")
+    end: str | None = Field(default=None, description="结束日期(YYYY-MM-DD)")
+
+
+@router.post("/dca-backtest", summary="定投回测(§3.5.8, TP-04, E3)")
+def dca_backtest(
+    req: DcaBacktestRequest,
+    db: Annotated[Session, Depends(get_db)],
+) -> Envelope[dict[str, Any]]:
+    """历史定投回测：回放后复权净值(AdjNAV, E3) + 申购费 + 赎回费 + IRR。"""
+    from domain.backtest_dca import run_dca
+
+    # 从 DB 读后复权净值
+    start = date.fromisoformat(req.start) if req.start else date(2020, 1, 1)
+    end = date.fromisoformat(req.end) if req.end else date.today()
+    nav = _load_adj_nav(db, req.code, start, end)
+    if nav is None or len(nav) < 2:
+        return Envelope.ok(
+            data={"available": False, "note": "净值数据不足"},
+            source=SOURCE_REALTIME,
+            as_of=date.today(),
+        )
+    result = run_dca(nav, freq=req.freq, amount=req.amount)
+    data = result.to_dict()
+    data["code"] = req.code
+    return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
+
+
+def _load_adj_nav(db: Session, code: str, start: date, end: date) -> pd.Series | None:
+    """从 DB 读后复权净值序列(复用 EvaluationService 逻辑)。"""
+    from sqlalchemy import select
+
+    from infra.db.models import Nav
+
+    rows = db.execute(
+        select(Nav.trade_date, Nav.adj_nav)
+        .where(Nav.code == code, Nav.trade_date >= start, Nav.trade_date <= end)
+        .order_by(Nav.trade_date)
+    ).all()
+    if not rows:
+        return None
+    dates = [r.trade_date for r in rows]
+    values = [float(r.adj_nav) for r in rows if r.adj_nav is not None]
+    return pd.Series(values, index=pd.to_datetime(dates)) if values else None
 
 
 __all__: list[str] = ["router"]
