@@ -198,16 +198,20 @@ def _detect_exclude(text: str, types: list[str]) -> list[str]:
 def _build_conditions(
     types: list[str], window: str | None, factors: dict[str, Any], exclude: list[str]
 ) -> list[dict[str, Any]]:
-    """结构化条件 -> /screen filters 格式(§2.21.2)。"""
+    """结构化条件 -> /screen filters 格式(§2.21.2)。
+
+    仅生成当前 /screen 可执行条件(type 白名单)；max_drawdown/return_rank 等
+    因子条件暂存 NLResult.factors(待 scores 扩展字段后接入)，不臆测生成无效 condition。
+    E6：exclude(index/etf) 用 not_in 完整排除(非 != 单值)。
+    """
     conds: list[dict[str, Any]] = []
     if types:
         conds.append({"field": "type", "op": "in", "value": types})
     if exclude:
-        conds.append({"field": "type", "op": "!=", "value": exclude[0]})  # 简化
-    if "max_drawdown_le" in factors:
-        conds.append({"field": "max_drawdown", "op": "<=", "value": factors["max_drawdown_le"]})
-    if "return_rank_ge" in factors:
-        conds.append({"field": "return_rank", "op": ">=", "value": factors["return_rank_ge"]})
+        # E6 红线：完整排除 index/etf(NOT IN，非 != 单值)
+        conds.append({"field": "type", "op": "not_in", "value": exclude})
+    # max_drawdown/return_rank：funds/scores 表当前无对应字段(D7/批算扩展)，
+    # 暂存 NLResult.factors 供前端展示与后续接入，不生成 /screen 无效 condition。
     return conds
 
 

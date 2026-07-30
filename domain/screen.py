@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 SCREEN_CACHE_TTL = 300  # 5 min
 
 #: 支持的过滤操作符(§2.21.2 filters.op)。
-SUPPORTED_OPS = {"=", "!=", ">", ">=", "<", "<=", "in", "like"}
+SUPPORTED_OPS = {"=", "!=", ">", ">=", "<", "<=", "in", "not_in", "like"}
 
 #: Fund 表可过滤字段白名单(§3.2 字段，防注入)。映射 field->ORM 属性(type 列属性为 type_)。
 FUND_FIELDS = {"code", "name", "type", "sub_type", "theme", "style"}
@@ -175,6 +175,8 @@ def _build_condition(field: str, op: str, value: Any) -> Any:
         return col <= value
     if op == "in" and isinstance(value, list):
         return col.in_(value)
+    if op == "not_in" and isinstance(value, list):
+        return ~col.in_(value)  # NOT IN(E6 排除 index/etf 用)
     if op == "like" and isinstance(value, str):
         return col.like(value)
     return None
