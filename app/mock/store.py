@@ -147,6 +147,41 @@ FUNDS: list[dict[str, Any]] = [
     },
 ]
 
+#: 按类型的默认费率(公募常识；fund 自带字段优先覆盖)。
+#: - buy_fee 申购费(前端，场内 ETF 场内佣金另算故 0)；redemption_fee 赎回费(持有一年内典型)；
+#: - management_fee 取 fund.fee_rate(年率)；custody_fee 托管费(年率)。
+FUND_FEE_DEFAULTS: dict[str, dict[str, float]] = {
+    "stock": {"buy_fee": 0.015, "redemption_fee": 0.005, "custody_fee": 0.0025},
+    "mix": {"buy_fee": 0.015, "redemption_fee": 0.005, "custody_fee": 0.0025},
+    "index": {"buy_fee": 0.010, "redemption_fee": 0.005, "custody_fee": 0.0010},
+    "etf": {"buy_fee": 0.0, "redemption_fee": 0.005, "custody_fee": 0.0010},
+    "bond": {"buy_fee": 0.008, "redemption_fee": 0.0, "custody_fee": 0.0010},
+    "qdii": {"buy_fee": 0.016, "redemption_fee": 0.005, "custody_fee": 0.0030},
+    "money": {"buy_fee": 0.0, "redemption_fee": 0.0, "custody_fee": 0.0},
+}
+
+
+def fund_fees(fund: dict[str, Any]) -> dict[str, float]:
+    """基金完整费率(申购/赎回/管理/托管/年综合)。
+
+    - management_fee 取 fund.fee_rate(年率)；其余优先取 fund 自带字段，回退类型默认。
+    - total_fee = 管理 + 托管(年综合费率)；> 2.0% 触发组合诊断预警(E9/E12，CLAUDE.md §4)。
+    - 模拟交易买入扣申购费、卖出扣赎回费(final_val 扣赎回费参与 IRR，E3/E14)。
+    """
+    d = FUND_FEE_DEFAULTS.get(fund.get("type", "mix"), FUND_FEE_DEFAULTS["mix"])
+    buy = float(fund.get("buy_fee", d["buy_fee"]))
+    red = float(fund.get("redemption_fee", d["redemption_fee"]))
+    mgmt = float(fund.get("fee_rate", 0.015))
+    cust = float(fund.get("custody_fee", d["custody_fee"]))
+    return {
+        "buy_fee": buy,
+        "redemption_fee": red,
+        "management_fee": mgmt,
+        "custody_fee": cust,
+        "total_fee": round(mgmt + cust, 4),
+    }
+
+
 #: 类型 -> 中文/Tab 标签(原型① 类型Tab；NL「稳健」排除 index/etf 见 E6)。
 TYPE_LABELS: dict[str, str] = {
     "stock": "股票型",
@@ -315,6 +350,49 @@ ATTRIBUTION: dict[str, dict[str, Any]] = {
         "note": "用披露真实权重+OTHER_CASH残差桶；多期几何链接(Carino/Frongello)",
     },
 }
+#: 指标摘要兜底值(无 metrics 行的基金回退；货币/债基风险低、收益低)。
+#: 字段对齐未来后端 metrics 表(§2.20.2)；此处仅筛选用「指示性」取值。
+_METRICS_FALLBACK: dict[str, dict[str, float]] = {
+    "stock": {"return_pct": 0.12, "max_drawdown": -0.22, "sharpe": 1.05},
+    "mix": {"return_pct": 0.10, "max_drawdown": -0.18, "sharpe": 1.15},
+    "index": {"return_pct": 0.08, "max_drawdown": -0.15, "sharpe": 1.20},
+    "etf": {"return_pct": 0.08, "max_drawdown": -0.15, "sharpe": 1.20},
+    "bond": {"return_pct": 0.045, "max_drawdown": -0.03, "sharpe": 1.50},
+    "qdii": {"return_pct": 0.09, "max_drawdown": -0.20, "sharpe": 0.90},
+    "money": {"return_pct": 0.02, "max_drawdown": -0.0001, "sharpe": 0.0},
+    "fof": {"return_pct": 0.07, "max_drawdown": -0.12, "sharpe": 1.00},
+}
+
+
+def fund_metrics_summary(code: str) -> dict[str, float]:
+    """基金指标摘要(return_pct/max_drawdown/sharpe，比率值，供筛选与结果表)。
+
+    优先取 METRICS(与页03 指标卡同源)；缺失回退按类型的指示性取值。
+    未来切真实接口时同名字段来自 metrics 表(§2.20.2)，切换零改动。
+    """
+    m = METRICS.get(code)
+    if m:
+        return {
+            "return_pct": float(m["年化收益"]),
+            "max_drawdown": float(m["最大回撤"]),
+            "sharpe": float(m["夏普比率"]),
+        }
+    f = fund_by_code(code)
+    ft = f.get("type", "mix") if f else "mix"
+    return dict(_METRICS_FALLBACK.get(ft, _METRICS_FALLBACK["mix"]))
+
+
+def fund_manager_tenure_years(code: str) -> float:
+    """经理从业年限(年，原型④ 筛选「经理从业 ≥ N 年」)。
+
+    Mock 按基金成立日至今估算(指示性)；未来由后端经理表 manager.tenure 提供。
+    """
+    f = fund_by_code(code)
+    if not f or not f.get("launch_date"):
+        return 5.0
+    return max(1.0, (AS_OF - f["launch_date"]).days / 365.25)
+
+
 #: 指数/债基替代说明(原型③ Brinson 边界)。
 ATTRIBUTION_SUBSTITUTE: dict[str, str] = {
     "index": "指数基金 -> 以跟踪误差/信息比率替代",
@@ -430,35 +508,39 @@ INDUSTRY_DIST: dict[str, list[dict[str, Any]]] = {
 
 # =====================================================================
 # 模拟交易(§2.20.2 paper_*；原型⑤；本地 session_state 记账，不连通实盘)
+# 数据自洽：shares/cost/cost_price 锚定 nav_series(code, days=30) 当前净值，
+# 使 _recompute() 重算后总收益仍为标注的 +8.6%(005827 -15.5% 联动回本 FR-40)。
+# 总资产 = cash 320000 + 持仓市值 766000 = 1,086,000 = init_capital × 1.086。
 # =====================================================================
 PAPER_ACCOUNT: dict[str, Any] = {
     "account_id": "paper-001",
     "init_capital": 1000000.0,
-    "cash": 320000.0,  # 初始持仓占用 680000(见 PAPER_POSITIONS)
-    "market_value": 680000.0,
+    "cash": 320000.0,  # 持仓占用 766000(见 PAPER_POSITIONS，与 _recompute 一致)
+    "market_value": 766000.0,
     "total_return": 0.086,
 }
-#: 初始持仓(原型⑤ 持仓看板；005827 亏损联动回本 FR-40)。
+#: 初始持仓(原型⑤ 持仓看板；005827 亏损 -15.5% 联动回本 FR-40)。
+#: shares = mv / 当前净值；cost = shares × cost_price；market_value/return 由 _recompute 重算。
 PAPER_POSITIONS: list[dict[str, Any]] = [
     {
         "code": "110011",
         "name": "易方达中小盘",
-        "cost": 50000.0,
-        "market_value": 54300.0,
+        "cost": 447514.0,
+        "market_value": 486000.0,
         "return_pct": 0.086,
         "bench_diff": 0.032,
-        "shares": 50277.0,
-        "cost_price": 0.994,
+        "shares": 383099.48,
+        "cost_price": 1.1681,
     },
     {
         "code": "005827",
         "name": "易方达蓝筹精选",
-        "cost": 40000.0,
-        "market_value": 33800.0,
+        "cost": 331361.0,
+        "market_value": 280000.0,
         "return_pct": -0.155,
         "bench_diff": -0.041,
-        "shares": 30727.0,
-        "cost_price": 1.302,
+        "shares": 230509.59,
+        "cost_price": 1.4375,
     },
 ]
 #: 定投回测(原型⑤ BR-4.4；区间≥1年真实回放)。
@@ -680,9 +762,14 @@ DATA_QUALITY: list[dict[str, Any]] = [
 # =====================================================================
 # 仪表盘聚合(原型①；FR-D1~D6 / DC-001；状态->榜单->学习 三段式)
 # =====================================================================
+#: 顶部 KPI 卡(原型① FR-D1)：组合收益 vs 基准，按正负着色(正翠绿/负红 E 金融语义)。
+#: ``return_pct`` 为比率(0.124=+12.4%)，``period`` 为周期标签，``bench`` 标记是否基准。
+DASHBOARD_KPIS: list[dict[str, Any]] = [
+    {"label": "模拟组合收益", "return_pct": 0.124, "period": "近一年", "bench": False},
+    {"label": "同期沪深300", "return_pct": 0.051, "period": "近一年", "bench": True},
+]
+#: 次要状态卡(待办/学习进度；原型① FR-D1/D5)。
 DASHBOARD_STATUS: list[dict[str, Any]] = [
-    {"k": "模拟组合收益", "v": "+12.4%", "color": "green"},
-    {"k": "同期沪深300", "v": "+5.1%", "color": "gray"},
     {"k": "待办提醒", "v": "2 条", "color": "red"},
     {"k": "学习进度", "v": "60%", "color": "blue"},
 ]

@@ -14,12 +14,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from app import api_client, state  # noqa: E402
+from app import api_client, state, utils  # noqa: E402
 from app.components import ui  # noqa: E402
 from app.mock import store  # noqa: E402
 
-st.title("🔍 智能筛选器")
-st.caption("左表单(AND/OR) + 右实时结果 · NL 解析回显 · 单因子排序 · 相似去重(≥70%)")
+ui.inject_global_style()
+ui.page_header(
+    "🔍 智能筛选器", "左表单(AND/OR) + 右实时结果 · NL 解析回显 · 单因子排序 · 相似去重(≥70%)"
+)
 
 if api_client.is_mock():
     ui.mock_hint()
@@ -58,9 +60,9 @@ with left:
         if st.session_state.get("nl_parsed"):
             p = st.session_state["nl_parsed"]
             st.markdown(
-                f'<div style="background:#eaf5f0;border:1px dashed #0f9d76;border-radius:6px;'
+                f'<div style="background:#F0FDF4;border:1px dashed #16A34A;border-radius:6px;'
                 f'padding:8px 10px;font-size:12px">✅ 已解析为条件：{p["cond"]}<br>'
-                f'<span style="color:#6b7785">置信度 {p["conf"]*100:.0f}% · 歧义时反问澄清 · '
+                f'<span style="color:#6B7280">置信度 {p["conf"]*100:.0f}% · 歧义时反问澄清 · '
                 f"解析失败回退规则</span></div>",
                 unsafe_allow_html=True,
             )
@@ -75,14 +77,15 @@ with right:
             default="综合评分",
             label_visibility="visible",
         )
-        results = api_client.screen_funds(f)
+        results = api_client.screen_funds(f, sort_by=sort_by)
         rrows = [
             {
                 "代码": r["code"],
                 "名称": r["name"],
                 "类型": store.TYPE_LABELS.get(r["type"], r["type"]),
-                "回撤": "-",
-                "年化": "-",
+                "回撤": utils.format_pct(store.fund_metrics_summary(r["code"])["max_drawdown"]),
+                "年化": utils.format_pct(store.fund_metrics_summary(r["code"])["return_pct"]),
+                "夏普": f"{store.fund_metrics_summary(r['code'])['sharpe']:.2f}",
                 "评分": r["score"],
             }
             for r in results

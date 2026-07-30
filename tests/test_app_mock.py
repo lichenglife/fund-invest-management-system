@@ -75,6 +75,36 @@ class TestStoreData:
         assert all(n["adj_nav"] > 0 for n in navs)  # NAV=0 不崩溃
 
 
+class TestFundFees:
+    """基金费率(申购/赎回/管理/托管/年综合；CLAUDE.md §4 费率预警>2% E9/E12)。"""
+
+    def test_management_fee_from_fee_rate(self) -> None:
+        f = store.fund_by_code("110011")
+        fees = store.fund_fees(f)
+        assert fees["management_fee"] == f["fee_rate"]  # 管理费取 fee_rate
+
+    def test_total_fee_warn_threshold(self) -> None:
+        """QDII 综合费率>2% 触发预警(E9/E12)。"""
+        fees = store.fund_fees(store.fund_by_code("000934"))
+        assert fees["total_fee"] > 0.02
+        # 其他类型不触发
+        assert store.fund_fees(store.fund_by_code("110011"))["total_fee"] < 0.02
+
+    def test_etf_zero_buy_fee(self) -> None:
+        """ETF 场内佣金另算，申购费 0。"""
+        fees = store.fund_fees(store.fund_by_code("000961"))
+        assert fees["buy_fee"] == 0.0
+
+    def test_money_zero_fees(self) -> None:
+        fees = store.fund_fees(store.fund_by_code("000509"))
+        assert fees["buy_fee"] == 0.0 and fees["redemption_fee"] == 0.0
+
+    def test_total_fee_is_mgmt_plus_custody(self) -> None:
+        for c in ("110011", "000961", "000934"):
+            fees = store.fund_fees(store.fund_by_code(c))
+            assert fees["total_fee"] == round(fees["management_fee"] + fees["custody_fee"], 4)
+
+
 class TestAttributionBoundary:
     """Brinson 边界(原型③)：仅 mixed/stock；index/etf 替代；bond 不显示(E1/E2)。"""
 
@@ -89,3 +119,85 @@ class TestAttributionBoundary:
     def test_substitute_messages(self) -> None:
         assert "跟踪误差" in store.ATTRIBUTION_SUBSTITUTE["index"]
         assert "不显示" in store.ATTRIBUTION_SUBSTITUTE["bond"]
+
+
+class TestMetricsSummary:
+    """指标摘要(供筛选/排序；优先 METRICS，缺失按类型回退)。"""
+
+    def test_from_metrics_when_present(self) -> None:
+        # 110011 有 METRICS 行 -> 与页03 指标卡同源
+        m = store.fund_metrics_summary("110011")
+        assert m["return_pct"] == store.METRICS["110011"]["年化收益"]
+        assert m["max_drawdown"] == store.METRICS["110011"]["最大回撤"]
+        assert m["sharpe"] == store.METRICS["110011"]["夏普比率"]
+
+    def test_fallback_by_type(self) -> None:
+        # 161725(stock) 无 METRICS -> 走 stock 回退
+        m = store.fund_metrics_summary("161725")
+        assert m == store._METRICS_FALLBACK["stock"]
+
+    def test_unknown_code(self) -> None:
+        m = store.fund_metrics_summary("NOT_EXIST")
+        assert m == store._METRICS_FALLBACK["mix"]  # 默认 mix
+
+
+class TestManagerTenure:
+    def test_from_launch_date(self) -> None:
+        # 110011 成立 2007-04-11 -> 至 2025-07-20 约 18 年
+        assert store.fund_manager_tenure_years("110011") >= 15.0
+
+    def test_unknown_code(self) -> None:
+        assert store.fund_manager_tenure_years("NOPE") == 5.0
+
+
+class TestScreenFunds:
+    """筛选器口径(滑杆百分点 vs 指标比率 ÷100)与排序。"""
+
+    def test_type_filter(self) -> None:
+        from app import api_client
+
+        rows = api_client.screen_funds({"fund_type": "bond"})
+        assert rows and all(r["type"] == "bond" for r in rows)
+
+    def test_max_drawdown_filter(self) -> None:
+        """回撤 ≤ 20% -> |drawdown| ≤ 0.20(回撤为负，drawdown ≥ -0.20)。"""
+        from app import api_client
+
+        rows = api_client.screen_funds({"max_drawdown": 20})
+        for r in rows:
+            assert store.fund_metrics_summary(r["code"])["max_drawdown"] >= -0.20
+
+    def test_min_return_filter(self) -> None:
+        from app import api_client
+
+        rows = api_client.screen_funds({"min_return": 8})
+        for r in rows:
+            assert store.fund_metrics_summary(r["code"])["return_pct"] >= 0.08
+
+    def test_min_tenure_filter(self) -> None:
+        from app import api_client
+
+        rows = api_client.screen_funds({"min_tenure": 15})
+        assert all(store.fund_manager_tenure_years(r["code"]) >= 15 for r in rows)
+
+    def test_sort_by_score(self) -> None:
+        from app import api_client
+
+        rows = api_client.screen_funds({}, sort_by="综合评分")
+        scores = [r["score"] for r in rows]
+        assert scores == sorted(scores, reverse=True)
+
+    def test_sort_by_drawdown(self) -> None:
+        """回撤排序：回撤小(优)在前(回撤为负值，-0.0001 优于 -0.22，故降序)。"""
+        from app import api_client
+
+        rows = api_client.screen_funds({}, sort_by="回撤")
+        draws = [store.fund_metrics_summary(r["code"])["max_drawdown"] for r in rows]
+        assert draws == sorted(draws, reverse=True)  # 降序：最优(接近0)在前
+
+    def test_sort_by_sharpe_descending(self) -> None:
+        from app import api_client
+
+        rows = api_client.screen_funds({}, sort_by="夏普")
+        sharpes = [store.fund_metrics_summary(r["code"])["sharpe"] for r in rows]
+        assert sharpes == sorted(sharpes, reverse=True)

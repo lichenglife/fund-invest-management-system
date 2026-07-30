@@ -119,7 +119,7 @@ def _mock() -> Any:
 
 
 # --- 仪表盘(原型① P1-12/P1-19a/b) ---
-def get_dashboard(fund_type: str = "all") -> dict[str, Any]:
+def _dashboard_mock(fund_type: str) -> dict[str, Any]:
     s = _mock()
     return {
         "status": s.DASHBOARD_STATUS,
@@ -127,6 +127,10 @@ def get_dashboard(fund_type: str = "all") -> dict[str, Any]:
         "dynamics": s.DASHBOARD_DYNAMICS,
         "learn_card": s.DASHBOARD_LEARN_CARD,
     }
+
+
+def get_dashboard(fund_type: str = "all") -> dict[str, Any]:
+    return _fetch("/api/v1/dashboard", lambda: _dashboard_mock(fund_type), fund_type=fund_type)
 
 
 # --- 数据中心(原型② P1-02/P1-13a~c) ---
@@ -164,48 +168,74 @@ def get_holdings(code: str) -> list[dict[str, Any]]:
 
 
 # --- 智能筛选(原型④ P1-06a~c) ---
-def screen_funds(filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    """表单筛选(本地);NL 解析、去重见 store。"""
+def screen_funds(
+    filters: dict[str, Any] | None = None, sort_by: str = "综合评分"
+) -> list[dict[str, Any]]:
+    """表单筛选 + 排序(本地演示)；NL 解析、去重见 store。
+
+    筛选口径(滑杆为百分点，指标为比率，故阈值 ÷100)：
+    - ``fund_type``/``theme`` 等值过滤；
+    - ``max_drawdown`` ≤ 阈值(回撤为负值，|drawdown| 越小越好 -> drawdown ≥ -阈值/100)；
+    - ``min_return`` ≥ 阈值/100；``min_tenure`` ≥ 年。
+    排序：综合评分 / 夏普 / 回撤(升序，越小越好) / 年化(降序)。
+    真实接口由后端向量化过滤；此处 Mock 形状与之一致(切换零改动)。
+    """
     s = _mock()
     rows = list(s.FUNDS)
     f = filters or {}
     if f.get("fund_type") and f["fund_type"] != "all":
         rows = [r for r in rows if r["type"] == f["fund_type"]]
-    if f.get("max_drawdown") is not None:
-        # 演示: 按规模近似(真实由后端向量化过滤)
-        pass
-    if f.get("min_return") is not None:
-        pass
     if f.get("theme") and f["theme"] != "不限":
         rows = [r for r in rows if r["theme"] == f["theme"]]
-    return sorted(rows, key=lambda x: x["score"], reverse=True)
+    if f.get("max_drawdown") is not None:
+        thr = float(f["max_drawdown"]) / 100.0
+        rows = [r for r in rows if s.fund_metrics_summary(r["code"])["max_drawdown"] >= -thr]
+    if f.get("min_return") is not None:
+        thr = float(f["min_return"]) / 100.0
+        rows = [r for r in rows if s.fund_metrics_summary(r["code"])["return_pct"] >= thr]
+    if f.get("min_tenure") is not None:
+        thr = float(f["min_tenure"])
+        rows = [r for r in rows if s.fund_manager_tenure_years(r["code"]) >= thr]
+
+    # 排序键(综合评分用 fund.score；其余用指标摘要)
+    sort_keys: dict[str, tuple[str, bool]] = {
+        "综合评分": ("score", True),
+        "夏普": ("sharpe", True),
+        "年化": ("return_pct", True),
+        "回撤": ("max_drawdown", True),  # 回撤为负，升序=回撤小(优)在前
+    }
+    field, desc = sort_keys.get(sort_by, ("score", True))
+    if field == "score":
+        return sorted(rows, key=lambda x: x["score"], reverse=desc)
+    return sorted(rows, key=lambda x: s.fund_metrics_summary(x["code"])[field], reverse=desc)
 
 
 # --- 模拟交易(原型⑤ P1-07a~e;本地 session 记账) ---
+# 注：账户/持仓用 state.py 本地记账(不连后端)，以下仅初始/定投回测走降级链。
 def get_paper_account() -> dict[str, Any]:
     """初始账户(后端就绪后从 /api/v1/paper/account 取真实)。"""
-    return _mock().PAPER_ACCOUNT
+    return _fetch("/api/v1/paper/account", lambda: _mock().PAPER_ACCOUNT)
 
 
 def get_paper_positions() -> list[dict[str, Any]]:
-    return _mock().PAPER_POSITIONS
+    return _fetch("/api/v1/paper/positions", lambda: _mock().PAPER_POSITIONS)
 
 
 def get_dca_backtest() -> dict[str, Any]:
-    return _mock().DCA_BACKTEST
+    return _fetch("/api/v1/paper/dca-backtest", lambda: _mock().DCA_BACKTEST)
 
 
 # --- 组合配置(原型⑥ P1-08a~d) ---
 def get_portfolio_components() -> list[dict[str, Any]]:
-    return _mock().PORTFOLIO_COMPONENTS
+    return _fetch("/api/v1/portfolio/components", lambda: _mock().PORTFOLIO_COMPONENTS)
 
 
 def get_portfolio_diagnosis() -> list[dict[str, Any]]:
-    return _mock().PORTFOLIO_DIAGNOSIS
+    return _fetch("/api/v1/portfolio/diagnosis", lambda: _mock().PORTFOLIO_DIAGNOSIS)
 
 
 # --- 宏观看板(原型⑦ P2-01a/b) ---
-def get_macro() -> dict[str, Any]:
+def _macro_mock() -> dict[str, Any]:
     s = _mock()
     return {
         "cards": s.MACRO_CARDS,
@@ -217,17 +247,21 @@ def get_macro() -> dict[str, Any]:
     }
 
 
+def get_macro() -> dict[str, Any]:
+    return _fetch("/api/v1/macro", _macro_mock)
+
+
 # --- 单基实验室(原型⑧ P1-09a/b) ---
 def get_lab_scenarios() -> list[dict[str, Any]]:
-    return _mock().LAB_SCENARIOS
+    return _fetch("/api/v1/lab/scenarios", lambda: _mock().LAB_SCENARIOS)
 
 
 def get_lab_strategies() -> list[dict[str, Any]]:
-    return _mock().LAB_STRATEGIES
+    return _fetch("/api/v1/lab/strategies", lambda: _mock().LAB_STRATEGIES)
 
 
 # --- 持仓穿透(原型⑨ P3-01a/b) ---
-def get_penetrate(code: str) -> dict[str, Any]:
+def _penetrate_mock(code: str) -> dict[str, Any]:
     s = _mock()
     return {
         "holdings": s.HOLDINGS.get(code, []),
@@ -237,8 +271,12 @@ def get_penetrate(code: str) -> dict[str, Any]:
     }
 
 
+def get_penetrate(code: str) -> dict[str, Any]:
+    return _fetch(f"/api/v1/funds/{code}/penetrate", lambda: _penetrate_mock(code))
+
+
 # --- 学习投教(原型⑩ P2-05a/b) ---
-def get_learn() -> dict[str, Any]:
+def _learn_mock() -> dict[str, Any]:
     s = _mock()
     return {
         "glossary": s.LEARN_GLOSSARY,
@@ -248,8 +286,12 @@ def get_learn() -> dict[str, Any]:
     }
 
 
+def get_learn() -> dict[str, Any]:
+    return _fetch("/api/v1/learn", _learn_mock)
+
+
 # --- AI 助手(原型⑪ P3-03a/b) ---
-def get_ai_demo() -> dict[str, Any]:
+def _ai_demo_mock() -> dict[str, Any]:
     s = _mock()
     return {
         "quick": s.AI_QUICK_COMMANDS,
@@ -259,8 +301,12 @@ def get_ai_demo() -> dict[str, Any]:
     }
 
 
+def get_ai_demo() -> dict[str, Any]:
+    return _fetch("/api/v1/ai/demo", _ai_demo_mock)
+
+
 # --- 风险监控(原型⑫ P2-03a~c) ---
-def get_risk() -> dict[str, Any]:
+def _risk_mock() -> dict[str, Any]:
     s = _mock()
     return {
         "types": s.RISK_TYPES,
@@ -270,3 +316,7 @@ def get_risk() -> dict[str, Any]:
         "high_signal": s.MACRO_HIGH_SIGNAL,
         "high_verdict": s.MACRO_HIGH_VERDICT,
     }
+
+
+def get_risk() -> dict[str, Any]:
+    return _fetch("/api/v1/risk", _risk_mock)
