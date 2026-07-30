@@ -82,4 +82,28 @@ def screen_dedup(
     return Envelope.ok(data=data, source=SOURCE_REALTIME, as_of=date.today())
 
 
+class NLParsePayload(BaseModel):
+    """POST /api/screen/nl 请求(§2.21.2)。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(description="自然语言查询")
+    context: dict[str, Any] | None = Field(default=None, description="上下文(account_id 等)")
+
+
+@router.post("/screen/nl", summary="NL 解析(规则+澄清, §3.4.7, E6)")
+def screen_nl(
+    payload: NLParsePayload,
+) -> Envelope[dict[str, Any]]:
+    """自然语言解析 -> 结构化条件或反问(§3.4.7 / DC-004 / E6 红线)。
+
+    规则兜底层(LLM 增强待 C1 key)；歧义返回 clarify，不臆测。
+    E6：稳健/低风险 -> type∈[bond,mixed] 排除 index/etf。
+    """
+    from domain.nl_parse import nl_parse
+
+    result = nl_parse(payload.query, context=payload.context)
+    return Envelope.ok(data=result.to_dict(), source=SOURCE_REALTIME, as_of=date.today())
+
+
 __all__: list[str] = ["router"]
