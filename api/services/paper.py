@@ -198,9 +198,16 @@ class PaperTradingService:
 
         actual_amount = actual_shares * nav
 
+        # 赎回费(E3 红线：final_val 扣赎回费，TP-04 REDEEM_FEE_BY_HOLD)
+        from domain.paper import final_value
+
+        # 持有时长(从持仓更新日算，简化)
+        hold_days = (td - position.updated_at.date()).days if position.updated_at else 0
+        final_amount, fee_amount = final_value(actual_amount, hold_days)
+
         # 原子事务
         position.shares -= actual_shares
-        acct.cash += actual_amount
+        acct.cash += final_amount  # 扣赎回费后入账
         trade = PaperTrade(
             account_id=account_id,
             code=code,
@@ -228,6 +235,8 @@ class PaperTradingService:
             },
             "cash": float(acct.cash),
             "trade_date": td.isoformat(),
+            "redeem_fee": float(fee_amount),  # 赎回费(E3)
+            "settled_amount": float(final_amount),  # 扣费后到账
         }
 
     # ------------------------------------------------------------------ 持仓
@@ -310,6 +319,55 @@ class PaperTradingService:
 
         logger.info("paper.reset", extra={"action": "reset", "account": account_id})
         return {"account_id": account_id, "cash": float(acct.cash), "reset": True}
+
+    # ------------------------------------------------------------------ 分红复权(P1-07b, E3)
+
+    def apply_dividend(
+        self,
+        code: str,
+        div_per_unit: Decimal,
+        ex_nav: Decimal,
+        *,
+        account_id: str = DEFAULT_ACCOUNT_ID,
+        mode: str = "reinvest",
+    ) -> dict[str, Any]:
+        """分红复权调整持仓(§3.5.4 / E3)。
+
+        E3：后复权净值已含分红再投，回测不调用本函数(删 DIVIDEND_MODE)；
+        本方法用于单位净值成交场景的分红份额调整(再投/现金)。
+
+        Raises:
+            NotFoundError: 持仓不存在。
+        """
+        from domain.paper import run_dividend
+
+        position = self._get_position(account_id, code)
+        if position is None:
+            raise NotFoundError(f"无持仓: {code}")
+        result = run_dividend(position.shares, div_per_unit, ex_nav, mode=mode)
+        if mode == "reinvest":
+            position.shares = result["shares_after"]
+        else:
+            # 现金分红：增加账户现金
+            acct = self.get_or_create_account(account_id)
+            acct.cash += result["cash_dividend"]
+        self.db.commit()
+        logger.info(
+            "paper.dividend",
+            extra={
+                "action": "dividend",
+                "code": code,
+                "mode": mode,
+                "new_shares": str(result["new_shares"]),
+            },
+        )
+        return {
+            "code": code,
+            "mode": mode,
+            "shares_after": float(result["shares_after"]),
+            "cash_dividend": float(result["cash_dividend"]),
+            "new_shares": float(result["new_shares"]),
+        }
 
     # ------------------------------------------------------------------ 内部
 

@@ -290,3 +290,97 @@ class TestAtomicity:
         assert data["cash"] + data["total_market_value"] == pytest.approx(
             data["total_assets"], abs=0.01
         )
+
+
+class TestDividend:
+    """POST /api/paper/dividend 分红复权(§3.5.4 / E3)。"""
+
+    def test_reinvest_increases_shares(self, client_with_account: TestClient) -> None:
+        """再投：持仓份额增加。"""
+        # 先买 1000 份
+        client_with_account.post(
+            "/api/v1/paper/buy",
+            json={
+                "code": "000001",
+                "shares": "1000",
+                "trade_date": "2025-01-15",
+            },
+        )
+        # 分红：每份 0.1，除息净值 1.0 -> 新增 100 份
+        resp = client_with_account.post(
+            "/api/v1/paper/dividend",
+            json={
+                "code": "000001",
+                "div_per_unit": "0.1",
+                "ex_nav": "1.0",
+                "mode": "reinvest",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["shares_after"] == pytest.approx(1100)
+        assert data["new_shares"] == pytest.approx(100)
+
+    def test_cash_dividend_increases_cash(self, client_with_account: TestClient) -> None:
+        """现金分红：份额不变，现金增加。"""
+        client_with_account.post(
+            "/api/v1/paper/buy",
+            json={
+                "code": "000001",
+                "shares": "1000",
+                "trade_date": "2025-01-15",
+            },
+        )
+        cash_before = client_with_account.get("/api/v1/paper/portfolio").json()["data"]["cash"]
+        resp = client_with_account.post(
+            "/api/v1/paper/dividend",
+            json={
+                "code": "000001",
+                "div_per_unit": "0.1",
+                "ex_nav": "1.0",
+                "mode": "cash",
+            },
+        )
+        assert resp.status_code == 200
+        cash_after = client_with_account.get("/api/v1/paper/portfolio").json()["data"]["cash"]
+        assert cash_after > cash_before  # 现金增加
+
+    def test_dividend_no_position(self, client_with_account: TestClient) -> None:
+        """无持仓 -> 40002。"""
+        resp = client_with_account.post(
+            "/api/v1/paper/dividend",
+            json={
+                "code": "000001",
+                "div_per_unit": "0.1",
+                "ex_nav": "1.0",
+            },
+        )
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
+
+
+class TestSellRedeemFee:
+    """E3 赎回费(DB 集成)。"""
+
+    def test_sell_returns_redeem_fee(self, client_with_account: TestClient) -> None:
+        """卖出返回赎回费字段(E3)。"""
+        client_with_account.post(
+            "/api/v1/paper/buy",
+            json={
+                "code": "000001",
+                "shares": "1000",
+                "trade_date": "2025-01-15",
+            },
+        )
+        resp = client_with_account.post(
+            "/api/v1/paper/sell",
+            json={
+                "code": "000001",
+                "shares": "500",
+                "trade_date": "2025-01-20",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "redeem_fee" in data  # 赎回费字段
+        assert "settled_amount" in data  # 扣费后到账
