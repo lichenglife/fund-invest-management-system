@@ -15,22 +15,53 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from app import api_client, state, utils  # noqa: E402
-from app.components.ui import fold, metric_row, mock_hint, source_footer  # noqa: E402
+from app.components.ui import (  # noqa: E402
+    fold,
+    inject_global_style,
+    kpi_card,
+    metric_row,
+    page_header,
+    source_footer,
+    warning_banner,
+)
+from app.mock import store  # noqa: E402
 
-st.title("📊 仪表盘")
-st.caption("状态 -> 榜单 -> 学习 三段式（FR-D1~D6）· 验证点：进首页即得学习线索")
+inject_global_style()
+page_header("📊 仪表盘", "状态 -> 榜单 -> 学习 三段式（FR-D1~D6）· 进首页即得学习线索")
 
 if api_client.is_mock():
-    mock_hint()
+    warning_banner("当前为示例数据 · 对应后端接口待实现（开发计划 P1/P2/P3）", key="mock", icon="🏗️")
 
-# --- 状态区(FR-D1/D5 顶部 4 卡) ---
+# --- 状态区(FR-D1/D5) ---
+# 1) 两张 KPI 卡：组合收益 vs 沪深300，正翠绿/负红(金融语义)，st.columns(2) 等宽统一 gap
+kpis = store.DASHBOARD_KPIS
+kc1, kc2 = st.columns(2)
+for col, k in zip((kc1, kc2), kpis, strict=False):
+    with col:
+        kpi_card(
+            label=k["label"],
+            value=utils.pct_text(k["return_pct"]),
+            period=k.get("period"),
+            positive=k["return_pct"] >= 0,
+        )
+# 2) 次要状态卡(待办/学习进度)
 data = api_client.get_dashboard()
-metric_row(data["status"])
+metric_row(store.DASHBOARD_STATUS)
 
 st.divider()
 
 # --- 榜单区：类型 Tab + Top10(FR-D2/D5) ---
-st.markdown("#### 🏆 综合评分榜")
+top_cols = st.columns([3, 2])
+with top_cols[0]:
+    st.markdown('<div class="fl-section-title">🏆 综合评分榜</div>', unsafe_allow_html=True)
+with top_cols[1]:
+    st.markdown(
+        f'<div class="fl-table-toolbar">'
+        f'<span class="fl-badge as-of">数据截至 {store.AS_OF.isoformat()}</span>'
+        f'<span class="fl-badge mock">{utils.mock_badge()}</span>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 tabs_cfg = [
     ("全部", "all"),
     ("股票型", "stock"),
@@ -47,9 +78,20 @@ for tab, (_label, ftype) in zip(tabs, tabs_cfg, strict=False):
     with tab:
         rows = api_client.get_dashboard(ftype)["top10"]
         if rows:
-            df = pd.DataFrame(rows)
-            df = df.rename(columns={"score": "综合评分"})
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            df = pd.DataFrame(rows).rename(columns={"score": "综合评分"})
+            # 自定义列宽：rank 窄 / code 等宽(数字定长) / name 大 / type 中 / 评分 小
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "rank": st.column_config.NumberColumn("排名", width="small"),
+                    "code": st.column_config.TextColumn("代码", width="small"),
+                    "name": st.column_config.TextColumn("名称", width="large"),
+                    "type": st.column_config.TextColumn("类型", width="small"),
+                    "综合评分": st.column_config.NumberColumn("综合评分", width="small"),
+                },
+            )
             st.caption("评分=多因子综合(收益/风险/性价比/规模/经理)，可解释")
         else:
             st.caption("该类型暂无上榜基金")
