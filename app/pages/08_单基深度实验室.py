@@ -17,8 +17,11 @@ import streamlit as st  # noqa: E402
 from app import api_client, utils  # noqa: E402
 from app.components import ui  # noqa: E402
 
-st.title("🧪 单基深度实验室")
-st.caption("把评估变推演 · 回本测算 / 情景推演 / 策略对照 + 联动模拟与笔记（FR-40~42）")
+ui.inject_global_style()
+ui.page_header(
+    "🧪 单基深度实验室",
+    "把评估变推演 · 回本测算 / 情景推演 / 策略对照 + 联动模拟与笔记（FR-40~42）",
+)
 
 if api_client.is_mock():
     ui.mock_hint()
@@ -27,13 +30,14 @@ if api_client.is_mock():
 bb_c, sc_c = st.columns(2)
 with bb_c:
     with ui.panel("回本测算器", tag="FR-40 · BR-10.1"):
+        # st.slider 不支持 format_func；用 format 参数格式化百分比
         loss_pct = st.slider(
             "当前收益率（亏损填负）",
             -0.60,
             0.0,
             -0.30,
             0.01,
-            format_func=lambda x: f"{x*100:+.0f}%",
+            format="%+.0f%%",
         )
         need = utils.breakeven_need(loss_pct)
         st.metric("回本需涨", f"+{need*100:.1f}%")

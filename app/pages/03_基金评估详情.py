@@ -18,8 +18,10 @@ from app import api_client, state, utils  # noqa: E402
 from app.components import brinson_chart, score_panel, style_box, ui  # noqa: E402
 from app.mock import store  # noqa: E402
 
-st.title("🔬 基金评估详情")
-st.caption("指标卡(区间/基准) · 五因子可解释评分 · 风格箱 · Brinson 归因 · 研究指标卡")
+ui.inject_global_style()
+ui.page_header(
+    "🔬 基金评估详情", "指标卡(区间/基准) · 五因子可解释评分 · 风格箱 · Brinson 归因 · 研究指标卡"
+)
 
 if api_client.is_mock():
     ui.mock_hint()
@@ -125,7 +127,7 @@ with ui.panel("研究型指标", tag="FR-45 · 分组卡片 + 阈值着色 · TP
             st.markdown(
                 f'<div style="border:1px solid {color};border-radius:8px;padding:10px 12px;'
                 f'background:{"#eef9f3" if it["level"]=="good" else "#fff8ec" if it["level"]=="warn" else "#fdeeee"}">'
-                f'<div style="font-size:12px;color:#6b7785">{it["name"]}</div>'
+                f'<div style="font-size:12px;color:#6B7280">{it["name"]}</div>'
                 f'<div style="font-size:18px;font-weight:700;color:{color}">{it["value"]:g}</div>'
                 f'<div style="font-size:11px">{it["desc"]}</div></div>',
                 unsafe_allow_html=True,

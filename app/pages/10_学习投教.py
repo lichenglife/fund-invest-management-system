@@ -17,8 +17,10 @@ import streamlit as st  # noqa: E402
 from app import api_client  # noqa: E402
 from app.components import ui  # noqa: E402
 
-st.title("📚 学习投教")
-st.caption("指标词典(全站 tooltip) · 角色三阶段路径 · 案例回放沙盒 · 行为金融问卷 · 笔记")
+ui.inject_global_style()
+ui.page_header(
+    "📚 学习投教", "指标词典(全站 tooltip) · 角色三阶段路径 · 案例回放沙盒 · 行为金融问卷 · 笔记"
+)
 
 if api_client.is_mock():
     ui.mock_hint()

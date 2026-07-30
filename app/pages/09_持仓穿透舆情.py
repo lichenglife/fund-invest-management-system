@@ -18,8 +18,10 @@ from app import api_client, utils  # noqa: E402
 from app.components import ui  # noqa: E402
 from app.mock import store  # noqa: E402
 
-st.title("🔎 持仓穿透舆情")
-st.caption("前十大(来源+时间，按占净值比排序) · 四维度财务卡 · 舆情周评(AI 统一出口)")
+ui.inject_global_style()
+ui.page_header(
+    "🔎 持仓穿透舆情", "前十大(来源+时间，按占净值比排序) · 四维度财务卡 · 舆情周评(AI 统一出口)"
+)
 
 if api_client.is_mock():
     ui.mock_hint()
@@ -66,7 +68,7 @@ with fin_c:
                 color = utils.level_color(f["level"])
                 st.markdown(
                     f'<div style="border:1px solid {color};border-radius:6px;padding:8px 10px;'
-                    f'text-align:center"><div style="font-size:11px;color:#6b7785">{f["dim"]}</div>'
+                    f'text-align:center"><div style="font-size:11px;color:#6B7280">{f["dim"]}</div>'
                     f'<div style="font-size:16px;font-weight:700;color:{color}">{f["value"]}</div>'
                     f'<div style="font-size:10px">{f["desc"]}</div></div>',
                     unsafe_allow_html=True,

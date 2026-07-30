@@ -19,8 +19,11 @@ from app import api_client, state  # noqa: E402
 from app.components import style_box, ui  # noqa: E402
 from app.mock import store  # noqa: E402
 
-st.title("🗂️ 基金数据中心")
-st.caption("全类型（含 ETF/LOF）· 搜索 + 分类树 + 发现 · 档案字段解释 · 净值复权/下载 · 跳穿透")
+ui.inject_global_style()
+ui.page_header(
+    "🗂️ 基金数据中心",
+    "全类型（含 ETF/LOF）· 搜索 + 分类树 + 发现 · 档案字段解释 · 净值复权/下载 · 跳穿透",
+)
 
 if api_client.is_mock():
     ui.mock_hint()
@@ -110,10 +113,27 @@ with tab_arch:
 # D. 净值复权 + 下载 + 盘中估算(DC-002 D，后复权净值 E3/E14)
 with tab_nav:
     nv = ["单位净值", "累计净值", "复权净值"]
-    sel = st.radio("净值类型", nv, horizontal=True, label_visibility="collapsed")
-    st.caption(f"当前展示：{sel}（回测统一用复权净值，杜绝分红双重计 E3/E14）")
-    navs = api_client.get_nav(code, days=120)
+    nc, rc = st.columns([3, 4])
+    with nc:
+        sel = st.radio("净值类型", nv, horizontal=True, label_visibility="collapsed")
+    with rc:
+        rng = st.segmented_control(
+            "区间",
+            ["最近一周", "最近一个月", "最近一年", "自成立以来"],
+            default="最近一年",
+            label_visibility="collapsed",
+        )
+    # 区间 -> 天数；自成立以来按真实成立日(上限 2000 防过老基金绘图过重)
+    launch = fund.get("launch_date") if fund else None
+    if rng == "自成立以来" and launch is not None:
+        range_days = min((store.AS_OF - launch).days, 2000)
+    else:
+        range_days = {"最近一周": 7, "最近一个月": 30, "最近一年": 252}[rng]
+    navs = api_client.get_nav(code, days=range_days)
     ndf = pd.DataFrame(navs)
+    st.caption(
+        f"当前展示：{sel} · {rng}（{len(navs)} 个交易日，回测统一用复权净值，杜绝分红双重计 E3/E14）"
+    )
     col_map = {"单位净值": "nav", "累计净值": "acc_nav", "复权净值": "adj_nav"}
     series = ndf.set_index("trade_date")[[col_map[sel]]]
     st.line_chart(series, use_container_width=True)

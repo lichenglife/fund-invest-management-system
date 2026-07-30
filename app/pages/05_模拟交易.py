@@ -19,8 +19,10 @@ from app import api_client, state, utils  # noqa: E402
 from app.components import ui  # noqa: E402
 from app.mock import store  # noqa: E402
 
-st.title("💰 模拟交易")
-st.caption("100万虚拟资金 · T 日收盘净值成交 · 历史定投回测 · 复盘联动回本（不连通实盘）")
+ui.inject_global_style()
+ui.page_header(
+    "💰 模拟交易", "100万虚拟资金 · T 日收盘净值成交 · 历史定投回测 · 复盘联动回本（不连通实盘）"
+)
 
 if api_client.is_mock():
     ui.mock_hint()
@@ -85,13 +87,39 @@ with trade_c:
         amount = st.number_input("金额(元)", min_value=100, value=50000, step=10000)
         note = st.text_area("买入逻辑（复盘用 · BR-4.5）", placeholder="如：估值低位，定投加仓")
         price = _price(code)
-        st.caption(f"当前后复权净值：{price:.4f} · 预计份额 {amount/price:,.2f}")
+        fund0 = store.fund_by_code(code) or store.FUNDS[0]
+        fees = store.fund_fees(fund0)
+        # 费率信息卡(申购/赎回/管理/托管/年综合；年综合>2% 预警 E9/E12，CLAUDE.md §4)
+        with st.container(border=True):
+            fc1, fc2, fc3, fc4 = st.columns(4)
+            fc1.metric("申购费", f"{fees['buy_fee']*100:.2f}%")
+            fc2.metric("赎回费", f"{fees['redemption_fee']*100:.2f}%")
+            fc3.metric("管理费(年)", f"{fees['management_fee']*100:.2f}%")
+            fc4.metric("托管费(年)", f"{fees['custody_fee']*100:.2f}%")
+            if fees["total_fee"] > 0.02:
+                st.error(f"⚠ 年综合费率 {fees['total_fee']*100:.2f}% > 2.0%，费率预警(E9/E12)")
+            else:
+                st.caption(f"年综合费率 {fees['total_fee']*100:.2f}%（管理+托管）")
+        # 预计成交明细(含费率)：买入扣申购费、卖出扣赎回费(final_val 扣赎回费参与 IRR E3/E14)
+        if side == "买入":
+            buy_fee = amount * fees["buy_fee"]
+            net_invest = amount - buy_fee
+            shares = net_invest / price
+            st.caption(
+                f"后复权净值 {price:.4f} · 申购费 {buy_fee:,.2f} · 净申购 {net_invest:,.2f} · 预计份额 {shares:,.2f}"
+            )
+        else:
+            red_fee = amount * fees["redemption_fee"]
+            net_recv = amount - red_fee
+            shares = amount / price
+            st.caption(
+                f"后复权净值 {price:.4f} · 赎回费 {red_fee:,.2f} · 实际到账 {net_recv:,.2f} · 对应份额 {shares:,.2f}"
+            )
         if st.button(f"模拟{side}", type="primary"):
             if side == "买入":
                 if amount > acct["cash"]:
                     st.error("可用资金不足")
                 else:
-                    shares = amount / price
                     acct["cash"] = round(acct["cash"] - amount, 2)
                     pos = next((p for p in state.paper_positions() if p["code"] == code), None)
                     if pos:
@@ -99,11 +127,10 @@ with trade_c:
                         pos["shares"] = round(pos["shares"] + shares, 4)
                         pos["cost_price"] = pos["cost"] / pos["shares"]
                     else:
-                        f0 = store.fund_by_code(code)
                         state.paper_positions().append(
                             {
                                 "code": code,
-                                "name": f0["name"] if f0 else code,
+                                "name": fund0["name"],
                                 "cost": float(amount),
                                 "shares": round(shares, 4),
                                 "cost_price": price,
@@ -113,10 +140,17 @@ with trade_c:
                             }
                         )
                     state.paper_trades().append(
-                        {"side": "buy", "code": code, "amount": amount, "note": note}
+                        {
+                            "side": "buy",
+                            "code": code,
+                            "amount": amount,
+                            "fee": round(buy_fee, 2),
+                            "note": note,
+                        }
                     )
                     st.success(
-                        f"已模拟买入 {code} {amount:,.0f}元（非交易时段顺延下一交易日，BR-4.2）"
+                        f"已模拟买入 {code} {amount:,.0f}元（申购费 {buy_fee:,.2f}，"
+                        f"份额 {shares:,.2f}；非交易时段顺延 BR-4.2）"
                     )
                     st.rerun()
             else:  # 卖出
@@ -126,20 +160,28 @@ with trade_c:
                 elif amount > pos["market_value"]:
                     st.error("卖出金额超过持仓市值")
                 else:
-                    shares = amount / price
                     pos["shares"] = round(pos["shares"] - shares, 4)
                     pos["cost"] = round(
                         pos["cost"] * max(pos["shares"], 0) / (pos["shares"] + shares), 2
                     )
-                    acct["cash"] = round(acct["cash"] + amount, 2)
+                    # 到账扣赎回费(E3/E14：final_val 扣赎回费参与 IRR)
+                    acct["cash"] = round(acct["cash"] + net_recv, 2)
                     if pos["shares"] <= 0.0001:
                         state.paper_positions()[:] = [
                             p for p in state.paper_positions() if p["code"] != code
                         ]
                     state.paper_trades().append(
-                        {"side": "sell", "code": code, "amount": amount, "note": note}
+                        {
+                            "side": "sell",
+                            "code": code,
+                            "amount": amount,
+                            "fee": round(red_fee, 2),
+                            "note": note,
+                        }
                     )
-                    st.success(f"已模拟卖出 {code} {amount:,.0f}元")
+                    st.success(
+                        f"已模拟卖出 {code} {amount:,.0f}元（赎回费 {red_fee:,.2f}，到账 {net_recv:,.2f}）"
+                    )
                     st.rerun()
         st.caption("⚙ 账户可重置清零，不连通任何实盘(BR-4.1)")
 

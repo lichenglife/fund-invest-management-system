@@ -18,8 +18,8 @@ import streamlit as st  # noqa: E402
 from app import api_client, utils  # noqa: E402
 from app.components import ui  # noqa: E402
 
-st.title("🌐 宏观市场认知底盘")
-st.caption("先定仓位中枢再选基金（FR-38/39）· 验证点：宏观是否易懂可落地为仓位")
+ui.inject_global_style()
+ui.page_header("🌐 宏观市场认知底盘", "先定仓位中枢再选基金（FR-38/39）· 宏观是否易懂可落地为仓位")
 
 if api_client.is_mock():
     ui.mock_hint()

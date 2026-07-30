@@ -18,8 +18,8 @@ from app import api_client, state, utils  # noqa: E402
 from app.components import diagnosis_table, ui  # noqa: E402
 from app.mock import store  # noqa: E402
 
-st.title("🧩 组合与配置")
-st.caption("核心-卫星 · 多层级诊断(红黄绿) · 回测 · 再平衡提醒(偏离 ±5%)")
+ui.inject_global_style()
+ui.page_header("🧩 组合与配置", "核心-卫星 · 多层级诊断(红黄绿) · 回测 · 再平衡提醒(偏离 ±5%)")
 
 if api_client.is_mock():
     ui.mock_hint()

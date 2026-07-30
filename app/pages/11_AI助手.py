@@ -17,8 +17,8 @@ import streamlit as st  # noqa: E402
 from app import api_client  # noqa: E402
 from app.components import ui  # noqa: E402
 
-st.title("🤖 AI 助手")
-st.caption("RAG 检索增强 · 无依据拒答 · 持仓舆情周评 · 失败降级（FR-29~32）")
+ui.inject_global_style()
+ui.page_header("🤖 AI 助手", "RAG 检索增强 · 无依据拒答 · 持仓舆情周评 · 失败降级（FR-29~32）")
 
 if api_client.is_mock():
     ui.mock_hint()

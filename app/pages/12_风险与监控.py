@@ -17,8 +17,10 @@ import streamlit as st  # noqa: E402
 from app import api_client, utils  # noqa: E402
 from app.components import ui  # noqa: E402
 
-st.title("🛡️ 风险与监控")
-st.caption("风险测评 · 预警中心 · 估值定投信号(PE分位->倍数) · 数据质量 · 高位排查")
+ui.inject_global_style()
+ui.page_header(
+    "🛡️ 风险与监控", "风险测评 · 预警中心 · 估值定投信号(PE分位->倍数) · 数据质量 · 高位排查"
+)
 
 if api_client.is_mock():
     ui.mock_hint()
