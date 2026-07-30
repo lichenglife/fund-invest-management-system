@@ -15,10 +15,11 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from app import api_client, state, utils  # noqa: E402
+from app.components.kpi_card import kpi_card  # noqa: E402
+from app.components.ranking_table import ranking_table  # noqa: E402
 from app.components.ui import (  # noqa: E402
     fold,
     inject_global_style,
-    kpi_card,
     metric_row,
     page_header,
     source_footer,
@@ -38,11 +39,17 @@ kpis = store.DASHBOARD_KPIS
 kc1, kc2 = st.columns(2)
 for col, k in zip((kc1, kc2), kpis, strict=False):
     with col:
+        rp = k["return_pct"]
+        # delta 传超额收益文本(组合卡显示相对基准超额，基准卡无)
+        delta_str = None
+        if k.get("delta") is not None:
+            delta_str = utils.pct_text(k["delta"])
         kpi_card(
             label=k["label"],
-            value=utils.pct_text(k["return_pct"]),
+            value=utils.pct_text(rp),
             period=k.get("period"),
-            positive=k["return_pct"] >= 0,
+            delta=delta_str,
+            is_positive=rp >= 0,
         )
 # 2) 次要状态卡(待办/学习进度)
 data = api_client.get_dashboard()
@@ -80,19 +87,18 @@ for tab, (_label, ftype) in zip(tabs, tabs_cfg, strict=False):
         if rows:
             df = pd.DataFrame(rows).rename(columns={"score": "综合评分"})
             # 自定义列宽：rank 窄 / code 等宽(数字定长) / name 大 / type 中 / 评分 小
-            st.dataframe(
+            # badge(数据截至/示例数据)已在标题行展示，Tab 内不重复传
+            ranking_table(
                 df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
+                columns_config={
                     "rank": st.column_config.NumberColumn("排名", width="small"),
                     "code": st.column_config.TextColumn("代码", width="small"),
                     "name": st.column_config.TextColumn("名称", width="large"),
                     "type": st.column_config.TextColumn("类型", width="small"),
                     "综合评分": st.column_config.NumberColumn("综合评分", width="small"),
                 },
+                caption="评分=多因子综合(收益/风险/性价比/规模/经理)，可解释",
             )
-            st.caption("评分=多因子综合(收益/风险/性价比/规模/经理)，可解释")
         else:
             st.caption("该类型暂无上榜基金")
 

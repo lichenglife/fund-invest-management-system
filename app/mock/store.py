@@ -765,8 +765,14 @@ DATA_QUALITY: list[dict[str, Any]] = [
 #: 顶部 KPI 卡(原型① FR-D1)：组合收益 vs 基准，按正负着色(正翠绿/负红 E 金融语义)。
 #: ``return_pct`` 为比率(0.124=+12.4%)，``period`` 为周期标签，``bench`` 标记是否基准。
 DASHBOARD_KPIS: list[dict[str, Any]] = [
-    {"label": "模拟组合收益", "return_pct": 0.124, "period": "近一年", "bench": False},
-    {"label": "同期沪深300", "return_pct": 0.051, "period": "近一年", "bench": True},
+    {
+        "label": "模拟组合收益",
+        "return_pct": 0.124,
+        "period": "近一年",
+        "delta": 0.073,  # 超额基准(组合 - 沪深300 = 12.4% - 5.1%)
+        "bench": False,
+    },
+    {"label": "同期沪深300", "return_pct": 0.051, "period": "近一年", "delta": None, "bench": True},
 ]
 #: 次要状态卡(待办/学习进度；原型① FR-D1/D5)。
 DASHBOARD_STATUS: list[dict[str, Any]] = [

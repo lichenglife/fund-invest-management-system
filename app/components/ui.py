@@ -133,23 +133,6 @@ def warning_banner(text: str, key: str, icon: str = "⚠️") -> None:
         )
 
 
-def kpi_card(label: str, value: str, period: str | None = None, positive: bool = True) -> None:
-    """圆角白底 KPI 卡(原型① FR-D1)：标签 + 数值(正绿负红) + 周期小标签。
-
-    ``positive`` 控制数值色：True 翠绿(收益为正)、False 红(亏损/跑输，金融语义)。
-    """
-    cls = "pos" if positive else "neg"
-    period_html = f'<div class="fl-kpi-period">{period}</div>' if period else ""
-    st.markdown(
-        f'<div class="fl-kpi-card">'
-        f'<div class="fl-kpi-label">{label}</div>'
-        f'<div class="fl-kpi-value {cls}">{value}</div>'
-        f"{period_html}"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-
-
 _CSS_PATH = Path(__file__).resolve().parent.parent / "static" / "style.css"
 
 
@@ -206,7 +189,6 @@ __all__ = [
     "fold",
     "mock_hint",
     "warning_banner",
-    "kpi_card",
     "df_with_style",
     "level_row",
     "tooltip",

@@ -245,6 +245,22 @@ body,
   color: var(--text-muted);
   margin-top: 6px;
 }
+.fl-kpi-card .fl-kpi-delta {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+.fl-kpi-card .fl-kpi-delta.pos {
+  background: var(--brand-bg);
+  color: var(--brand);
+}
+.fl-kpi-card .fl-kpi-delta.neg {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
 
 /* =====================================================================
  * 榜单工具栏：数据截至 + 示例数据 badge(顶部右侧)
