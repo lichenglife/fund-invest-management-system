@@ -21,8 +21,9 @@ from sqlalchemy.orm import Session
 from domain.attribution import Attribution, brinson_attribution
 from domain.metrics import DEFAULT_EVAL_WINDOW, Metrics, compute_metrics
 from domain.research import ERPResult, ProxyResult, erp_proxy, peg_proxy
-from domain.scoring import Score, multi_factor_score
+from domain.scoring import SCORE_WEIGHTS, Score, recompute_with_weights
 from infra.db.models import Fund, Holding, Nav
+from infra.db.models.fund import Score as ScoreModel
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class EvaluationService:
         用 adj_nav(后复权净值，E3 红线)；按 window 截取近 N 年。
         """
         years = _parse_window_years(window)
-        cutoff = date.today().replace(year=date.today().year - years)
+        cutoff = _window_cutoff(years)  # 闰年 2月29 安全(避免 date.replace 崩溃)
         rows = self.db.execute(
             select(Nav.trade_date, Nav.adj_nav)
             .where(Nav.code == code, Nav.trade_date >= cutoff)
@@ -107,13 +108,43 @@ class EvaluationService:
     def get_score(
         self, code: str, *, weights: dict[str, int] | None = None, window: str = DEFAULT_EVAL_WINDOW
     ) -> Score | None:
-        """五因子评分(§3.3.8.1 / P1-03b)。"""
+        """五因子评分(§3.3.8.1 / P1-03b)。
+
+        ADR-002(唯一权威源)：在线查询读批算结果(``scores`` 表，P1-05 夜算产出)，
+        不重算横截面百分位(§3.3.9)；可调权重时用存储的子分即时重算 composite
+        (分位表不变)。批算未运行 -> composite=None(不在线重算百分位)。
+        """
         fund = self.get_fund(code)
         if fund is None:
             return None
-        nav = self.load_nav_series(code, window=window)
-        asset_class = _fund_type_to_asset_class(fund.type_)
-        return multi_factor_score(code, nav=nav, asset_class=asset_class, weights=weights)
+        row = self.db.get(ScoreModel, code)
+        if row is None:
+            # 批算未运行：composite=None(ADR-002 禁止在线重算百分位)
+            return Score(
+                code=code,
+                composite=None,
+                weights=dict(SCORE_WEIGHTS),
+                as_of=None,
+            )
+        stored_weights = row.weights or dict(SCORE_WEIGHTS)
+        base = Score(
+            code=code,
+            composite=float(row.composite),
+            factors=row.factors,
+            weights=stored_weights,
+            as_of=row.as_of.isoformat() if row.as_of else None,
+        )
+        # 可调权重：用存储子分即时重算(分位表不变, ADR-002)
+        if weights is not None and weights != stored_weights:
+            new_comp = recompute_with_weights(base, weights)
+            return Score(
+                code=code,
+                composite=new_comp,
+                factors=row.factors,
+                weights=weights,
+                as_of=base.as_of,
+            )
+        return base
 
     # ------------------------------------------------------------------ 风格箱
 
@@ -142,17 +173,14 @@ class EvaluationService:
         if fund is None:
             return None
         hp = self.load_holdings(code)
-        # 构造单期(periods=[{w_p, R_p, R_b}]；基准暂缺 -> unavailable)
-        # 持仓权重用于 w_p；R_p/R_b 暂缺(需基准成分收益，P1-04b 后续补)
         if not hp:
-            return brinson_attribution(
-                fund.type_,
-                periods=[],
-            )
-        # MVP 占位：持仓有但基准/收益缺失 -> unavailable
-        return brinson_attribution(
-            fund.type_,
-            periods=[{"w_p": {h["stock"]: h["weight"] for h in hp}, "R_p": {}, "R_b": {}}],
+            return brinson_attribution(fund.type_, periods=[])
+        # MVP：基准成分收益暂缺(D2/D7) -> unavailable=True，禁止返回误导性 0 值(§3.3.8.2)
+        # 完整实现待基准成分数据采集(P1-02)后补 R_p/R_b
+        return Attribution(
+            unavailable=True,
+            reason="benchmark_returns_missing",
+            scope=fund.type_,
         )
 
     # ------------------------------------------------------------------ 研究指标(P1-03d)
@@ -185,6 +213,20 @@ def _parse_window_years(window: str) -> int:
         return int(w)
     except ValueError:
         return 3
+
+
+def _window_cutoff(years: int) -> date:
+    """计算 N 年前的截止日期(闰年 2月29 安全)。
+
+    ``date.replace(year=year-N)`` 在 2月29 触发 ValueError；改用 3月1日回退1天，
+    保证任意 today 都不崩(§4 红线：极值输入不崩溃)。
+    """
+    today = date.today()
+    try:
+        return today.replace(year=today.year - years)
+    except ValueError:
+        # 2月29 -> 回退到 2月28
+        return today.replace(month=2, day=28, year=today.year - years)
 
 
 def _fund_type_to_asset_class(fund_type: str) -> str:

@@ -128,7 +128,12 @@ def _cache_scores(results: dict[str, dict[str, Any]]) -> int:
 def _load_nav(db: Session, code: str, *, window: str) -> pd.Series | None:
     """从 DB 读基金净值序列(复用 EvaluationService 逻辑)。"""
     years = 3 if "3" in window else 1
-    cutoff = date.today().replace(year=date.today().year - years)
+    # 闰年 2月29 安全(避免 date.replace 崩溃)
+    today = date.today()
+    try:
+        cutoff = today.replace(year=today.year - years)
+    except ValueError:
+        cutoff = today.replace(month=2, day=28, year=today.year - years)
     rows = db.execute(
         select(Nav.trade_date, Nav.adj_nav)
         .where(Nav.code == code, Nav.trade_date >= cutoff)

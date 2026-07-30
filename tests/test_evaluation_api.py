@@ -26,7 +26,7 @@ def client_with_fund(db_url: str):
     import infra.db.models  # noqa: F401
     from api.deps import get_db
     from infra.db import Base
-    from infra.db.models import Fund, Nav
+    from infra.db.models import Fund, Nav, Score
 
     eng = create_engine(db_url)
     Base.metadata.drop_all(eng, checkfirst=True)
@@ -58,6 +58,23 @@ def client_with_fund(db_url: str):
                     as_of=date.today(),
                 )
             )
+        # 写入批算评分(模拟 P1-05 夜算产出，含子分供在线查询/调权重重算)
+        s.add(
+            Score(
+                code="000001",
+                window="3y",
+                weights={"ret": 20, "risk": 25, "perf": 20, "scale": 15, "manager": 20},
+                composite=Decimal("82.3"),
+                factors={
+                    "ret": {"sub_score": 88.0, "weight": 20, "raw": 0.10, "contrib": 1760.0},
+                    "risk": {"sub_score": 75.0, "weight": 25, "raw": -0.05, "contrib": 1875.0},
+                    "perf": {"sub_score": 80.0, "weight": 20, "raw": 0.8, "contrib": 1600.0},
+                    "scale": {"sub_score": 100.0, "weight": 15, "raw": 100.0, "contrib": 1500.0},
+                    "manager": {"sub_score": 70.0, "weight": 20, "raw": 0.02, "contrib": 1400.0},
+                },
+                as_of=date.today(),
+            )
+        )
         s.commit()
 
     def _override_get_db() -> Iterator[Session]:
@@ -123,6 +140,8 @@ class TestScoreEndpoint:
         assert "weights" in data
         # 权重默认 SCORE_WEIGHTS(E4/E5: ret=20)
         assert data["weights"]["ret"] == 20
+        # composite 来自批算 scores 表(ADR-002)，非 None
+        assert data["composite"] is not None
 
     def test_custom_weights(self, client_with_fund: TestClient) -> None:
         """可调权重(ADR-002, ?weights=)。"""
@@ -164,7 +183,9 @@ class TestAttributionEndpoint:
         data = resp.json()["data"]
         assert "scope" in data
         assert data["scope"] == "mixed"  # 混合基在 BRINSON_SCOPE
-        assert "unavailable" in data  # 基准缺失时 unavailable
+        # 基准收益缺失(MVP) -> unavailable=True，不返回误导性 0 值(§3.3.8.2)
+        assert data["unavailable"] is True
+        assert data["active_return"] is None  # 不返回假 0
 
     def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
         resp = client_with_fund.get("/api/v1/funds/999999/attribution")
