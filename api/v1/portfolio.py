@@ -13,6 +13,7 @@ from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
@@ -81,6 +82,31 @@ def delete_portfolio(
     svc = PortfolioService(db)
     result = svc.delete(portfolio_id)
     return Envelope.ok(data=result, source=SOURCE_REALTIME, as_of=date.today())
+
+
+@router.get("/{portfolio_id}/diagnosis", summary="组合诊断红黄绿(§3.6.6.1, TP-03)")
+def diagnose_portfolio(
+    portfolio_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    risk_type: str = Query(default="moderate", description="风险偏好(conservative/moderate/aggressive)"),
+) -> Envelope[dict[str, Any]]:
+    """组合诊断：五维红黄绿 + 整体评级 + 再平衡(E8/E9/E12)。"""
+    from domain.diagnosis import diagnose
+    from infra.db.models import Fund
+
+    svc = PortfolioService(db)
+    portfolio = svc.get(portfolio_id)  # 40002 if not found
+    weights = {w["code"]: w["weight"] for w in portfolio["weights"]}
+
+    # 查基金类型
+    codes = list(weights.keys())
+    funds = db.execute(
+        select(Fund.code, Fund.type_).where(Fund.code.in_(codes))
+    ).all() if codes else []
+    fund_types = {f.code: f.type_ for f in funds}
+
+    report = diagnose(portfolio_id, weights, fund_types=fund_types, risk_type=risk_type)
+    return Envelope.ok(data=report.to_dict(), source=SOURCE_REALTIME, as_of=date.today())
 
 
 __all__: list[str] = ["router"]

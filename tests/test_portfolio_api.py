@@ -214,3 +214,40 @@ class TestImportFromPaper:
         )
         assert resp.status_code == 404
         assert resp.json()["code"] == 40002
+
+
+class TestDiagnosePortfolio:
+    """GET /api/v1/portfolios/{id}/diagnosis(§3.6.6.1 / TP-03 / E8/E9/E12)。
+
+    验证端点接线(含 select 导入)与七字段信封；fixture 基金均为 mixed(权益类)。
+    """
+
+    def test_diagnosis_returns_five_dims(self, client_with_funds: TestClient) -> None:
+        """诊断返回五维 + 整体评级 + 信封。"""
+        pid = client_with_funds.post(
+            "/api/v1/portfolios",
+            json={
+                "name": "诊断测试",
+                "weights": [{"code": "000001", "weight": 1.0}],
+            },
+        ).json()["data"]["portfolio_id"]
+
+        resp = client_with_funds.get(f"/api/v1/portfolios/{pid}/diagnosis?risk_type=moderate")
+        assert resp.status_code == 200
+        body = resp.json()
+        # 七字段信封(§2.21)
+        assert body["code"] == 0
+        assert body["data"] is not None
+        assert "disclaimer" in body and body["disclaimer"]
+        report = body["data"]
+        assert report["portfolio_id"] == pid
+        assert set(report["per_dim"]) == {"asset", "overseas", "industry", "style", "single"}
+        assert report["rating"] in {"red", "yellow", "green"}
+        # mixed 全权益 -> moderate(40-60%) 越界 -> 红(E8)
+        assert report["per_dim"]["asset"]["status"] == "red"
+
+    def test_diagnosis_not_found(self, client_with_funds: TestClient) -> None:
+        """不存在 -> 40002。"""
+        resp = client_with_funds.get("/api/v1/portfolios/pf_none/diagnosis")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
