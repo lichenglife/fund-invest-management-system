@@ -73,9 +73,7 @@ class TestPortfolioBacktest:
         """两基加权：组合日收益 = 0.5*ret_A + 0.5*ret_B。"""
         nav_a = _nav_series(1.0, 0.002, days=100)
         nav_b = _nav_series(1.0, 0.001, days=100)
-        result = portfolio_backtest(
-            {"A": nav_a, "B": nav_b}, {"A": 0.5, "B": 0.5}
-        )
+        result = portfolio_backtest({"A": nav_a, "B": nav_b}, {"A": 0.5, "B": 0.5})
         assert result.cum_return > 0
         assert result.max_drawdown == pytest.approx(0.0, abs=1e-9)  # 单调涨 -> 无回撤
 

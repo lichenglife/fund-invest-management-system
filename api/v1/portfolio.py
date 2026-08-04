@@ -89,7 +89,9 @@ def delete_portfolio(
 def diagnose_portfolio(
     portfolio_id: str,
     db: Annotated[Session, Depends(get_db)],
-    risk_type: str = Query(default="moderate", description="风险偏好(conservative/moderate/aggressive)"),
+    risk_type: str = Query(
+        default="moderate", description="风险偏好(conservative/moderate/aggressive)"
+    ),
 ) -> Envelope[dict[str, Any]]:
     """组合诊断：五维红黄绿 + 整体评级 + 再平衡(E8/E9/E12)。"""
     from domain.diagnosis import diagnose
@@ -101,9 +103,9 @@ def diagnose_portfolio(
 
     # 查基金类型
     codes = list(weights.keys())
-    funds = db.execute(
-        select(Fund.code, Fund.type_).where(Fund.code.in_(codes))
-    ).all() if codes else []
+    funds = (
+        db.execute(select(Fund.code, Fund.type_).where(Fund.code.in_(codes))).all() if codes else []
+    )
     fund_types = {f.code: f.type_ for f in funds}
 
     report = diagnose(portfolio_id, weights, fund_types=fund_types, risk_type=risk_type)
@@ -127,17 +129,19 @@ def backtest_portfolio(
     if not weights:
         return Envelope.ok(
             data={"available": False, "note": "组合无持仓"},
-            source=SOURCE_BATCH, as_of=date.today(),
+            source=SOURCE_BATCH,
+            as_of=date.today(),
         )
     # 权重和>1.05 拒绝(§5)
     if sum(weights.values()) > 1.05:
         from schemas.errors import ParamError
+
         raise ParamError("组合权重和超过 1.05，请先校准")
 
     codes = list(weights.keys())
-    funds = db.execute(
-        select(Fund.code, Fund.type_).where(Fund.code.in_(codes))
-    ).all() if codes else []
+    funds = (
+        db.execute(select(Fund.code, Fund.type_).where(Fund.code.in_(codes))).all() if codes else []
+    )
     fund_types = {f.code: f.type_ for f in funds}
 
     start = _window_start(window)
@@ -176,9 +180,9 @@ def rebalance_portfolio(
     weights = {w["code"]: w["weight"] for w in portfolio["weights"]}
 
     codes = list(weights.keys())
-    funds = db.execute(
-        select(Fund.code, Fund.type_).where(Fund.code.in_(codes))
-    ).all() if codes else []
+    funds = (
+        db.execute(select(Fund.code, Fund.type_).where(Fund.code.in_(codes))).all() if codes else []
+    )
     fund_types = {f.code: f.type_ for f in funds}
 
     # 复用诊断的再平衡逻辑(TP-03 §5)
@@ -190,7 +194,8 @@ def rebalance_portfolio(
             "rebalance": report.rebalance,
             "asset_dim": report.per_dim["asset"],
         },
-        source=SOURCE_REALTIME, as_of=date.today(),
+        source=SOURCE_REALTIME,
+        as_of=date.today(),
     )
 
 

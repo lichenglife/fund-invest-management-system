@@ -85,9 +85,7 @@ class PortfolioBacktestResult:
         }
 
 
-def pick_benchmark(
-    weights: dict[str, float], fund_types: dict[str, str] | None = None
-) -> str:
+def pick_benchmark(weights: dict[str, float], fund_types: dict[str, str] | None = None) -> str:
     """按组合底层资产类别加权主导项选基准(E14)。
 
     Args:
@@ -126,7 +124,9 @@ def portfolio_backtest(
         PortfolioBacktestResult。
     """
     # 仅保留有权重且有净值的成分
-    codes = [c for c in weights if c in nav_dict and nav_dict[c] is not None and len(nav_dict[c]) > 1]
+    codes = [
+        c for c in weights if c in nav_dict and nav_dict[c] is not None and len(nav_dict[c]) > 1
+    ]
     if not codes:
         return PortfolioBacktestResult()
 
