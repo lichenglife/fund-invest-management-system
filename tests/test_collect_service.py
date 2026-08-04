@@ -78,21 +78,6 @@ class TestScheduler:
 class TestCollectService:
     """§3.1.2 采集编排(带锁) + DB upsert 集成。"""
 
-    @pytest.fixture()
-    def engine(self, db_url: str):
-
-        from sqlalchemy import create_engine
-
-        import infra.db.models  # noqa: F401
-        from infra.db import Base
-
-        eng = create_engine(db_url)
-        Base.metadata.drop_all(eng, checkfirst=True)
-        Base.metadata.create_all(eng)
-        yield eng
-        Base.metadata.drop_all(eng)
-        eng.dispose()
-
     def test_collect_fund_list_with_lock(self, engine) -> None:
         """采集名单：获锁 -> 清洗 -> upsert；写质量日志。"""
         from sqlalchemy.orm import Session

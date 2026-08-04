@@ -123,21 +123,6 @@ class TestBatchScoreAll:
 class TestBatchWorker:
     """§3.3.9 worker run_once(写 PG scores 表)。"""
 
-    @pytest.fixture()
-    def engine(self, db_url: str):
-
-        from sqlalchemy import create_engine
-
-        import infra.db.models  # noqa: F401
-        from infra.db import Base
-
-        eng = create_engine(db_url)
-        Base.metadata.drop_all(eng, checkfirst=True)
-        Base.metadata.create_all(eng)
-        yield eng
-        Base.metadata.drop_all(eng)
-        eng.dispose()
-
     def test_run_once_writes_scores(self, engine, monkeypatch: pytest.MonkeyPatch) -> None:
         """run_once -> upsert scores 表(§3.3.9)。"""
         from sqlalchemy import text

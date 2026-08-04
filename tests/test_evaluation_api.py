@@ -11,27 +11,23 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 pytestmark = pytest.mark.db
 
 
 @pytest.fixture()
-def client_with_fund(db_url: str):
-    """建表 + 写入基金+净值 + 返回 TestClient(依赖注入隔离 DB)。"""
+def client_with_fund(db_session: Session):
+    """种子数据 + TestClient(get_db override 指向共享引擎；表已由 conftest db_session truncate)。"""
     from collections.abc import Iterator
 
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session, sessionmaker
+    from sqlalchemy.orm import sessionmaker
 
-    import infra.db.models  # noqa: F401
     from api.deps import get_db
-    from infra.db import Base
     from infra.db.models import Fund, Nav, Score
 
-    eng = create_engine(db_url)
-    Base.metadata.drop_all(eng, checkfirst=True)
-    Base.metadata.create_all(eng)
-    TestSession = sessionmaker(bind=eng, autocommit=False, autoflush=False)
+    # conftest db_session 已 truncate 清表；复用其引擎建 TestSession(请求期隔离)
+    TestSession = sessionmaker(bind=db_session.bind, autocommit=False, autoflush=False)
     with TestSession() as s:
         s.add(
             Fund(
@@ -91,8 +87,6 @@ def client_with_fund(db_url: str):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-    Base.metadata.drop_all(eng)
-    eng.dispose()
 
 
 class TestMetricsEndpoint:

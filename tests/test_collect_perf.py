@@ -15,27 +15,13 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from domain.collect import clean_nav
 from infra.collect_repo import upsert_funds, upsert_navs
 
 pytestmark = [pytest.mark.db, pytest.mark.perf]
-
-
-@pytest.fixture()
-def engine(db_url: str):
-
-    import infra.db.models  # noqa: F401
-    from infra.db import Base
-
-    eng = create_engine(db_url)
-    Base.metadata.drop_all(eng, checkfirst=True)
-    Base.metadata.create_all(eng)
-    yield eng
-    Base.metadata.drop_all(eng)
-    eng.dispose()
 
 
 class TestUpsertPerformance:

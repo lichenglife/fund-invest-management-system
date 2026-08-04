@@ -8,33 +8,17 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import Engine, create_engine, inspect, text
+from sqlalchemy import Engine, inspect, text
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session
 
 from infra.db.models import Fund
 
 pytestmark = pytest.mark.db
-
-
-@pytest.fixture()
-def engine(db_url: str) -> Iterator[Engine]:
-    """建表 + 清理。用独立 test schema 避免 dev 数据污染。"""
-    import infra.db.models  # noqa: F401
-    from infra.db import Base
-
-    eng = create_engine(db_url)
-    # 在独立 schema 建表(若权限不允许则回退到 public，测试后全 drop)
-    Base.metadata.drop_all(eng, checkfirst=True)
-    Base.metadata.create_all(eng)
-    yield eng
-    Base.metadata.drop_all(eng)
-    eng.dispose()
 
 
 def test_all_ten_tables_created(engine: Engine) -> None:

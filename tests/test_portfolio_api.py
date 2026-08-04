@@ -11,27 +11,23 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 pytestmark = pytest.mark.db
 
 
 @pytest.fixture()
-def client_with_funds(db_url: str):
-    """建表 + 基金+模拟持仓 + 返回 TestClient。"""
+def client_with_funds(db_session: Session):
+    """种子数据 + TestClient(get_db override 指向共享引擎；表已由 conftest db_session truncate)。"""
     from collections.abc import Iterator
 
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session, sessionmaker
+    from sqlalchemy.orm import sessionmaker
 
-    import infra.db.models  # noqa: F401
     from api.deps import get_db
-    from infra.db import Base
     from infra.db.models import Fund, PaperAccount, PaperPosition
 
-    eng = create_engine(db_url)
-    Base.metadata.drop_all(eng, checkfirst=True)
-    Base.metadata.create_all(eng)
-    TestSession = sessionmaker(bind=eng, autocommit=False, autoflush=False)
+    # conftest db_session 已 truncate 清表；复用其引擎建 TestSession(请求期隔离)
+    TestSession = sessionmaker(bind=db_session.bind, autocommit=False, autoflush=False)
     with TestSession() as s:
         # 基金
         for code in ["000001", "000002", "000003"]:
@@ -77,8 +73,6 @@ def client_with_funds(db_url: str):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-    Base.metadata.drop_all(eng)
-    eng.dispose()
 
 
 class TestCreatePortfolio:
@@ -249,5 +243,62 @@ class TestDiagnosePortfolio:
     def test_diagnosis_not_found(self, client_with_funds: TestClient) -> None:
         """不存在 -> 40002。"""
         resp = client_with_funds.get("/api/v1/portfolios/pf_none/diagnosis")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
+
+
+class TestBacktestPortfolio:
+    """GET /api/v1/portfolios/{id}/backtest(§3.6.7 / TP-04 / E3/E14)。"""
+
+    def test_backtest_envelope(self, client_with_funds: TestClient) -> None:
+        """回测返回七字段信封 + 组合 ID。"""
+        pid = client_with_funds.post(
+            "/api/v1/portfolios",
+            json={
+                "name": "回测测试",
+                "weights": [{"code": "000001", "weight": 1.0}],
+            },
+        ).json()["data"]["portfolio_id"]
+
+        resp = client_with_funds.get(f"/api/v1/portfolios/{pid}/backtest?window=3y")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["code"] == 0
+        assert body["data"]["portfolio_id"] == pid
+        # 无净值数据 -> available=False(fixture 未插入 nav)
+        assert body["data"]["available"] is False
+
+    def test_backtest_not_found(self, client_with_funds: TestClient) -> None:
+        """不存在 -> 40002。"""
+        resp = client_with_funds.get("/api/v1/portfolios/pf_none/backtest")
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40002
+
+
+class TestRebalancePortfolio:
+    """GET /api/v1/portfolios/{id}/rebalance(§3.6.5 / FR-24/37 / E8)。"""
+
+    def test_rebalance_envelope(self, client_with_funds: TestClient) -> None:
+        """再平衡返回评级 + rebalance 列表。"""
+        pid = client_with_funds.post(
+            "/api/v1/portfolios",
+            json={
+                "name": "再平衡测试",
+                "weights": [{"code": "000001", "weight": 1.0}],
+            },
+        ).json()["data"]["portfolio_id"]
+
+        resp = client_with_funds.get(f"/api/v1/portfolios/{pid}/rebalance?risk_type=moderate")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["code"] == 0
+        assert body["data"]["portfolio_id"] == pid
+        assert body["data"]["rating"] in {"red", "yellow", "green"}
+        assert "rebalance" in body["data"]
+        assert "asset_dim" in body["data"]
+
+    def test_rebalance_not_found(self, client_with_funds: TestClient) -> None:
+        """不存在 -> 40002。"""
+        resp = client_with_funds.get("/api/v1/portfolios/pf_none/rebalance")
         assert resp.status_code == 404
         assert resp.json()["code"] == 40002

@@ -19,6 +19,7 @@ os.environ.setdefault("ADMIN_USERNAME", "admin")
 
 from cryptography.exceptions import InvalidTag  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
 from infra.security import crypto, token  # noqa: E402
 from infra.security.token import (  # noqa: E402
@@ -79,22 +80,17 @@ class TestAuthAPI:
     """§2.21 信封 + §4.2 40101 + §6.4 鉴权依赖。"""
 
     @pytest.fixture()
-    def client_with_admin(self, db_url: str):
-        """建表 + 写入测试 admin 账户 + 返回 TestClient(用 dependency_overrides 隔离 DB)。"""
+    def client_with_admin(self, db_session: Session):
+        """种子 admin 账户 + TestClient(get_db override 指向共享引擎；表已由 conftest db_session truncate)。"""
         from collections.abc import Iterator
 
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import Session, sessionmaker
+        from sqlalchemy.orm import sessionmaker
 
-        import infra.db.models  # noqa: F401
         from api.deps import get_db
-        from infra.db import Base
         from infra.db.models import AdminUser
 
-        eng = create_engine(db_url)
-        Base.metadata.drop_all(eng, checkfirst=True)
-        Base.metadata.create_all(eng)
-        TestSession = sessionmaker(bind=eng, autocommit=False, autoflush=False)
+        # conftest db_session 已 truncate 清表；复用其引擎建 TestSession(请求期隔离)
+        TestSession = sessionmaker(bind=db_session.bind, autocommit=False, autoflush=False)
         with TestSession() as s:
             s.add(
                 AdminUser(
@@ -121,8 +117,6 @@ class TestAuthAPI:
             yield c
 
         app.dependency_overrides.clear()
-        Base.metadata.drop_all(eng)
-        eng.dispose()
 
     def test_login_success_envelope(self, client_with_admin: TestClient) -> None:
         """登录成功返回 7 字段信封 + access_token(§2.19.6)。"""
