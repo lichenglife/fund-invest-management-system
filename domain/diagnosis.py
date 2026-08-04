@@ -64,8 +64,11 @@ class DimResult:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "dim": self.dim, "status": self.status,
-            "detail": self.detail, "advice": self.advice, "metrics": self.metrics,
+            "dim": self.dim,
+            "status": self.status,
+            "detail": self.detail,
+            "advice": self.advice,
+            "metrics": self.metrics,
         }
 
 
@@ -160,57 +163,67 @@ def _overall(states: list[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _asset_dim(
-    weights: dict[str, float], fund_types: dict[str, str], risk_type: str
-) -> DimResult:
+def _asset_dim(weights: dict[str, float], fund_types: dict[str, str], risk_type: str) -> DimResult:
     """股债维(E8：目标仓位由 risk_type 推导)。"""
     target = ASSET_TARGET.get(risk_type, ASSET_TARGET["moderate"])
     equity = sum(w for c, w in weights.items() if fund_types.get(c, "mixed") in EQUITY_TYPES)
     lo, hi = target
     if equity < lo or equity > hi:
         return DimResult(
-            "asset", RED,
+            "asset",
+            RED,
             f"权益仓位 {equity*100:.1f}%，目标区间 {lo*100:.0f}-{hi*100:.0f}%(risk_type={risk_type})",
             f"调整权益仓位至 {lo*100:.0f}-{hi*100:.0f}%",
             {"equity_ratio": equity, "target": list(target)},
         )
-    return DimResult("asset", GREEN, f"权益仓位 {equity*100:.1f}% 适中",
-                     metrics={"equity_ratio": equity, "target": list(target)})
+    return DimResult(
+        "asset",
+        GREEN,
+        f"权益仓位 {equity*100:.1f}% 适中",
+        metrics={"equity_ratio": equity, "target": list(target)},
+    )
 
 
 def _overseas_dim(weights: dict[str, float], fund_types: dict[str, str]) -> DimResult:
     """海外维(§3.2)。"""
     overseas = sum(w for c, w in weights.items() if fund_types.get(c) in OVERSEAS_TYPES)
     if overseas > THRESHOLDS["overseas_total_max"]:
-        return DimResult("overseas", YELLOW,
-                         f"海外合计 {overseas*100:.1f}% 偏高(>40%)",
-                         "注意汇率/时区风险",
-                         {"overseas_total": overseas})
-    return DimResult("overseas", GREEN, f"海外配置 {overseas*100:.1f}% 适度",
-                     metrics={"overseas_total": overseas})
+        return DimResult(
+            "overseas",
+            YELLOW,
+            f"海外合计 {overseas*100:.1f}% 偏高(>40%)",
+            "注意汇率/时区风险",
+            {"overseas_total": overseas},
+        )
+    return DimResult(
+        "overseas",
+        GREEN,
+        f"海外配置 {overseas*100:.1f}% 适度",
+        metrics={"overseas_total": overseas},
+    )
 
 
 def _industry_dim(weights: dict[str, float]) -> DimResult:
     """行业维(§3.3，MVP：无行业数据 -> 待 P3 穿透)。"""
     # TODO(P3-01a 穿透)：按持仓穿透行业聚合算 HHI
-    return DimResult("industry", GREEN, "行业集中度待穿透数据(P3)",
-                     metrics={"available": False})
+    return DimResult("industry", GREEN, "行业集中度待穿透数据(P3)", metrics={"available": False})
 
 
-def _style_dim(
-    weights: dict[str, float], fund_types: dict[str, str], risk_type: str
-) -> DimResult:
+def _style_dim(weights: dict[str, float], fund_types: dict[str, str], risk_type: str) -> DimResult:
     """风格维(§3.4，MVP：简化为权益类占比近似)。"""
     # TODO(P1-03 风格箱)：用持仓法/收益回归判定风格暴露
-    growth_exposure = sum(w for c, w in weights.items()
-                          if fund_types.get(c) in EQUITY_TYPES) * 0.5  # 简化近似
+    growth_exposure = (
+        sum(w for c, w in weights.items() if fund_types.get(c) in EQUITY_TYPES) * 0.5
+    )  # 简化近似
     if growth_exposure > THRESHOLDS["style_growth_max"] and risk_type == "conservative":
-        return DimResult("style", RED,
-                         f"成长暴露 {growth_exposure*100:.0f}% 与保守偏好错配",
-                         "降低成长风格暴露",
-                         metrics={"growth_exposure": growth_exposure})
-    return DimResult("style", GREEN, "风格配置待风格箱(P1-03)",
-                     metrics={"available": False})
+        return DimResult(
+            "style",
+            RED,
+            f"成长暴露 {growth_exposure*100:.0f}% 与保守偏好错配",
+            "降低成长风格暴露",
+            metrics={"growth_exposure": growth_exposure},
+        )
+    return DimResult("style", GREEN, "风格配置待风格箱(P1-03)", metrics={"available": False})
 
 
 def _single_fund_dim(
@@ -218,8 +231,7 @@ def _single_fund_dim(
 ) -> DimResult:
     """个基维(E9/E12，逐成分检查)。"""
     if not fund_metrics:
-        return DimResult("single", GREEN, "个基隐患待指标数据",
-                         metrics={"available": False})
+        return DimResult("single", GREEN, "个基隐患待指标数据", metrics={"available": False})
     red_count = 0
     yellow_count = 0
     for code, _w in weights.items():
@@ -227,8 +239,9 @@ def _single_fund_dim(
         # E9：止损红线(相对基准超额<-15% 或 回撤>30%)
         excess = m.get("excess")
         max_dd = m.get("max_drawdown")
-        if (excess is not None and excess < THRESHOLDS["single_excess_loss"]) or \
-           (max_dd is not None and max_dd > THRESHOLDS["single_max_drawdown"]):
+        if (excess is not None and excess < THRESHOLDS["single_excess_loss"]) or (
+            max_dd is not None and max_dd > THRESHOLDS["single_max_drawdown"]
+        ):
             red_count += 1
             continue
         # E9：止盈软提示
@@ -245,20 +258,29 @@ def _single_fund_dim(
             yellow_count += 1
 
     if red_count > 0:
-        return DimResult("single", RED, f"{red_count} 个成分触发止损红线(E9)",
-                         "评估止损/减仓",
-                         {"red_count": red_count, "yellow_count": yellow_count})
+        return DimResult(
+            "single",
+            RED,
+            f"{red_count} 个成分触发止损红线(E9)",
+            "评估止损/减仓",
+            {"red_count": red_count, "yellow_count": yellow_count},
+        )
     if yellow_count > 0:
-        return DimResult("single", YELLOW, f"{yellow_count} 个成分有隐患提示",
-                         "关注止盈/费率/规模",
-                         {"red_count": red_count, "yellow_count": yellow_count})
-    return DimResult("single", GREEN, "个基无隐患",
-                     metrics={"red_count": 0, "yellow_count": 0})
+        return DimResult(
+            "single",
+            YELLOW,
+            f"{yellow_count} 个成分有隐患提示",
+            "关注止盈/费率/规模",
+            {"red_count": red_count, "yellow_count": yellow_count},
+        )
+    return DimResult("single", GREEN, "个基无隐患", metrics={"red_count": 0, "yellow_count": 0})
 
 
 def _rebalance(
-    per_dim: dict[str, dict[str, Any]], weights: dict[str, float],
-    risk_type: str, fund_types: dict[str, str]
+    per_dim: dict[str, dict[str, Any]],
+    weights: dict[str, float],
+    risk_type: str,
+    fund_types: dict[str, str],
 ) -> list[dict[str, Any]]:
     """再平衡提醒(§5：偏离目标 > 5% 触发)。"""
     rebal: list[dict[str, Any]] = []
@@ -268,18 +290,25 @@ def _rebalance(
     lo, hi = target
     mid = (lo + hi) / 2
     if abs(equity - mid) > REBALANCE_DRIFT:
-        rebal.append({
-            "dim": "asset",
-            "current": round(equity, 4),
-            "target": round(mid, 4),
-            "action": f"权益 {equity*100:.1f}% -> {mid*100:.1f}%",
-        })
+        rebal.append(
+            {
+                "dim": "asset",
+                "current": round(equity, 4),
+                "target": round(mid, 4),
+                "action": f"权益 {equity*100:.1f}% -> {mid*100:.1f}%",
+            }
+        )
     return rebal
 
 
 __all__: list[str] = [
-    "RED", "YELLOW", "GREEN",
-    "ASSET_TARGET", "REBALANCE_DRIFT", "THRESHOLDS",
-    "DimResult", "DiagnosisReport",
+    "RED",
+    "YELLOW",
+    "GREEN",
+    "ASSET_TARGET",
+    "REBALANCE_DRIFT",
+    "THRESHOLDS",
+    "DimResult",
+    "DiagnosisReport",
     "diagnose",
 ]
