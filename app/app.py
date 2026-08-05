@@ -1,7 +1,7 @@
 """FundLens Streamlit 入口(详设§2.7 纯 Python；原型§2 信息架构)。
 
 顶部栏：系统名 + 角色切换(学习者/评估者/交易者) + 数据截至日期(原型§2)。
-落地引导至仪表盘；侧边由 Streamlit 原生 pages/ 提供 12 模块导航。
+落地引导至仪表盘；侧边由 Streamlit 原生 pages/ 提供 12 模块 + 后台管理导航。
 
 运行：``streamlit run app/app.py``
 """
@@ -71,7 +71,7 @@ def main() -> None:
     st.divider()
     page_header(
         "欢迎使用 FundLens",
-        "覆盖 学 -> 懂 -> 筛 -> 练 -> 评 -> 穿 12 个功能模块 · 从左侧导航选择模块进入",
+        "覆盖 学 -> 懂 -> 筛 -> 练 -> 评 -> 穿 12 个功能模块 + 后台管理 · 从左侧导航选择模块进入",
     )
 
     with st.container(border=True):
