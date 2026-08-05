@@ -621,32 +621,17 @@ def breakeven_need(loss_pct: float) -> float:
 
 #: 情景推演(原型⑧ BR-10.2；含对持仓影响列)。
 LAB_SCENARIOS: list[dict[str, Any]] = [
-    {"scenario": "保守", "target": 3000, "expected": -0.05, "impact": "仓位不变"},
-    {"scenario": "基准", "target": 3400, "expected": 0.08, "impact": "小步定投"},
-    {"scenario": "乐观", "target": 3800, "expected": 0.20, "impact": "可适度加仓"},
+    {"scenario": "保守", "expected": -0.05, "final_value": 0.95, "impact": "仓位不变"},
+    {"scenario": "基准", "expected": 0.08, "final_value": 1.08, "impact": "小步定投"},
+    {"scenario": "乐观", "expected": 0.20, "final_value": 1.20, "impact": "可适度加仓"},
 ]
-#: 五策略对照(原型⑧ BR-10.3；适用条件/优劣/适合人群，含回本联动行)。
+#: 五策略对照(原型⑧ BR-10.3；对齐真实后端 strategy/name/final_value/total_return/max_drawdown/note)。
 LAB_STRATEGIES: list[dict[str, Any]] = [
-    {
-        "strategy": "持有等待",
-        "cond": "逻辑未破、长期",
-        "pro_con": "省心，需耐性",
-        "fit": "长期投资者",
-    },
-    {"strategy": "定投加仓", "cond": "低估区", "pro_con": "摊低成本，怕阴跌", "fit": "工薪定投族"},
-    {"strategy": "波段", "cond": "震荡市", "pro_con": "增厚收益，需纪律", "fit": "有时间盯盘者"},
-    {
-        "strategy": "调仓/止损",
-        "cond": "逻辑破坏",
-        "pro_con": "控风险，可能卖飞",
-        "fit": "风控优先者",
-    },
-    {
-        "strategy": "回本联动",
-        "cond": "已亏损",
-        "pro_con": "闭环「亏了怎么办」",
-        "fit": "模拟交易者",
-    },
+    {"strategy": "hold", "name": "持有", "final_value": 1.08, "total_return": 0.08, "max_drawdown": -0.12, "note": "买入持有"},
+    {"strategy": "dca", "name": "定投", "final_value": 1.06, "total_return": 0.06, "max_drawdown": -0.08, "note": "月定投1000元"},
+    {"strategy": "swing", "name": "波段", "final_value": 1.10, "total_return": 0.10, "max_drawdown": -0.05, "note": "涨跌5%触发"},
+    {"strategy": "rebalance", "name": "调仓", "final_value": 1.07, "total_return": 0.07, "max_drawdown": -0.09, "note": "月频均线调仓"},
+    {"strategy": "stop_loss", "name": "止损", "final_value": 0.95, "total_return": -0.05, "max_drawdown": -0.10, "note": "跌10%止损"},
 ]
 
 
@@ -814,3 +799,214 @@ def dashboard_top10(fund_type: str = "all") -> list[dict[str, Any]]:
         }
         for i, r in enumerate(rows[:10])
     ]
+
+
+# =====================================================================
+# 后台管理(详设§2.16 系统监控 + §3.14 任务调度与监控 + 开发规范§9.3 变更评审)
+# 任务执行历史 / 五维监控 / 数据质量看板 / 变更评审评估 · 示例数据
+# =====================================================================
+
+#: 定时任务执行历史(§3.14.3 scheduler_jobs；每行=一次执行)。
+ADMIN_JOBS: list[dict[str, Any]] = [
+    {
+        "id": 1001,
+        "job_id": "collect_all",
+        "job_name": "增量采集(名单+净值+重仓)",
+        "trigger": "cron",
+        "status": "success",
+        "started_at": "2026-08-04T18:00:00+08:00",
+        "finished_at": "2026-08-04T18:12:30+08:00",
+        "duration_ms": 750000,
+        "error": None,
+        "args": {},
+        "result_summary": {"funds": 1, "navs": 2850, "holdings": 320},
+    },
+    {
+        "id": 1002,
+        "job_id": "fund_recalc",
+        "job_name": "指标/评分重算",
+        "trigger": "cron",
+        "status": "success",
+        "started_at": "2026-08-04T18:30:00+08:00",
+        "finished_at": "2026-08-04T18:41:08+08:00",
+        "duration_ms": 668000,
+        "error": None,
+        "args": {"window": "3y"},
+        "result_summary": {"recalculated": 2850},
+    },
+    {
+        "id": 1003,
+        "job_id": "sentiment",
+        "job_name": "舆情日更",
+        "trigger": "cron",
+        "status": "failed",
+        "started_at": "2026-08-04T08:00:00+08:00",
+        "finished_at": "2026-08-04T08:02:15+08:00",
+        "duration_ms": 135000,
+        "error": "AkShare 舆情接口超时(已重试 2 次仍失败)",
+        "args": {},
+        "result_summary": None,
+    },
+    {
+        "id": 1004,
+        "job_id": "valuation_signal",
+        "job_name": "估值信号刷新",
+        "trigger": "cron",
+        "status": "success",
+        "started_at": "2026-08-04T06:00:00+08:00",
+        "finished_at": "2026-08-04T06:03:42+08:00",
+        "duration_ms": 222000,
+        "error": None,
+        "args": {},
+        "result_summary": {"signals": 12},
+    },
+    {
+        "id": 1005,
+        "job_id": "backup",
+        "job_name": "每日备份",
+        "trigger": "cron",
+        "status": "success",
+        "started_at": "2026-08-04T01:00:00+08:00",
+        "finished_at": "2026-08-04T01:08:50+08:00",
+        "duration_ms": 530000,
+        "error": None,
+        "args": {},
+        "result_summary": {"size_mb": 1280},
+    },
+    {
+        "id": 1006,
+        "job_id": "weekly_report",
+        "job_name": "周报生成",
+        "trigger": "cron",
+        "status": "success",
+        "started_at": "2026-08-04T09:00:00+08:00",
+        "finished_at": "2026-08-04T09:04:18+08:00",
+        "duration_ms": 258000,
+        "error": None,
+        "args": {},
+        "result_summary": {"report_id": "wr-20260804"},
+    },
+    {
+        "id": 1007,
+        "job_id": "collect_all",
+        "job_name": "增量采集(手动触发)",
+        "trigger": "manual",
+        "status": "success",
+        "started_at": "2026-08-04T14:22:00+08:00",
+        "finished_at": "2026-08-04T14:33:12+08:00",
+        "duration_ms": 672000,
+        "error": None,
+        "args": {"codes": ["005827"]},
+        "result_summary": {"navs": 1},
+    },
+]
+
+#: §2.16 五维监控汇总(每维 level=good/warn/bad，对齐告警阈值)。
+ADMIN_MONITOR: dict[str, Any] = {
+    "as_of": "2026-08-04",
+    "items": [
+        {
+            "key": "data_collect",
+            "name": "数据采集",
+            "value": "99.6%",
+            "level": "good",
+            "threshold": "成功率<95% / 耗时>30min",
+            "detail": "近24h 成功率 99.6%，平均耗时 12.5min，缺失 0 天",
+        },
+        {
+            "key": "data_quality",
+            "name": "数据质量",
+            "value": "0.3%",
+            "level": "warn",
+            "threshold": "对账误差>0.5% 标红",
+            "detail": "对账误差 0.3%(阈值0.5%)；1 只基金交叉验证异常标记",
+        },
+        {
+            "key": "api",
+            "name": "API 服务",
+            "value": "P95 0.6s",
+            "level": "good",
+            "threshold": "P95>2s / 错误率>1%",
+            "detail": "P95 0.62s，错误率 0.2%，QPS 18(自启动窗口)",
+        },
+        {
+            "key": "scheduler",
+            "name": "定时任务",
+            "value": "5/6 按时",
+            "level": "warn",
+            "threshold": "未执行即告警",
+            "detail": "sentiment 今日执行失败(已重试仍失败)，其余按时产出",
+        },
+        {
+            "key": "resource",
+            "name": "资源",
+            "value": "磁盘 62%",
+            "level": "good",
+            "threshold": "磁盘>80%",
+            "detail": "CPU 35% / 内存 48% / 磁盘 62%",
+        },
+    ],
+    "kpi": {
+        "today_runs": 6,
+        "success_rate": 0.833,
+        "avg_duration_ms": 505000,
+        "failed": 1,
+    },
+}
+
+#: 数据质量看板明细(对齐 P2-03c /quality/dashboard)。
+ADMIN_QUALITY: dict[str, Any] = {
+    "as_of": "2026-08-04",
+    "summary": DATA_QUALITY,
+    "logs": [
+        {
+            "entity": "all",
+            "check_date": "2026-08-04",
+            "missing_count": 0,
+            "anomaly_flag": False,
+            "cv_error": 0.0030,
+            "source": "akshare",
+            "note": "名单采集正常",
+        },
+        {
+            "entity": "005827",
+            "check_date": "2026-08-04",
+            "missing_count": 2,
+            "anomaly_flag": True,
+            "cv_error": 0.0072,
+            "source": "akshare",
+            "note": "净值缺失2天 + 交叉验证误差 0.72% 超阈",
+        },
+        {
+            "entity": "110011",
+            "check_date": "2026-08-04",
+            "missing_count": 0,
+            "anomaly_flag": False,
+            "cv_error": 0.0021,
+            "source": "tushare",
+            "note": "Tushare 备源对账正常",
+        },
+    ],
+}
+
+#: 变更评审评估(开发规范§9.3 OQ + §2.16 阈值触发)。
+ADMIN_CHANGE_ASSESSMENT: dict[str, Any] = {
+    "need_review": True,
+    "review_type": "CR",  # ADR 技术选型 / CR 需求变更 / release_dod 发布 / none
+    "severity": "yellow",  # green / yellow / red
+    "reasons": [
+        "sentiment 定时任务今日执行失败(已重试仍失败)，影响舆情更新链路(§2.16 定时任务未执行即告警)",
+        "基金 005827 交叉验证误差 0.72% > 0.5% 阈值，疑似数据源字段口径变更(§2.16 数据质量标红)",
+    ],
+    "actions": [
+        "排查 sentiment 任务失败根因(AkShare 舆情接口可用性 / Tushare 备源降级 §2.15)",
+        "核实 005827 数据源字段口径是否变更；确认变更后发起 CR(需求变更管理规范)",
+        "若涉及接口/算法口径调整，同步写 ADR(docs/adr/，CLAUDE.md §11)",
+    ],
+    "process_refs": [
+        "开发规范 §9.3 版本与变更管理(变更评审 OQ 机制)",
+        "CLAUDE.md §11 技术选型变更须 ADR，重大变更走评审",
+        "CR 目录建议: docs/基金评估系统_交付文档/13_需求变更管理规范/cr/",
+        "发布 DoD: 开发规范 §9.5 发布检查清单",
+    ],
+}

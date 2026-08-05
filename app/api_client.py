@@ -142,8 +142,18 @@ def get_dashboard(fund_type: str = "all") -> dict[str, Any]:
 
 
 # --- 数据中心(原型② P1-02/P1-13a~c) ---
-def list_funds() -> list[dict[str, Any]]:
-    return _fetch("/api/v1/funds", lambda: _mock().FUNDS)
+def list_funds(
+    q: str | None = None, fund_type: str | None = None, page: int = 1, page_size: int = 100
+) -> list[dict[str, Any]]:
+    """基金列表(§3.2.2)。真实后端返回 {items,total,...}，提取 items；mock 返回 list。"""
+    data = _fetch(
+        "/api/v1/funds",
+        lambda: _mock().FUNDS,
+        q=q, type=fund_type, page=page, page_size=page_size,
+    )
+    if isinstance(data, dict):
+        return data.get("items", [])
+    return data or []
 
 
 def get_fund(code: str) -> dict[str, Any] | None:
@@ -260,12 +270,47 @@ def get_macro() -> dict[str, Any]:
 
 
 # --- 单基实验室(原型⑧ P1-09a/b) ---
-def get_lab_scenarios() -> list[dict[str, Any]]:
-    return _fetch("/api/v1/lab/scenarios", lambda: _mock().LAB_SCENARIOS)
+_LAB_SCENARIO_LABEL = {"conservative": "保守", "baseline": "基准", "optimistic": "乐观"}
 
 
-def get_lab_strategies() -> list[dict[str, Any]]:
-    return _fetch("/api/v1/lab/strategies", lambda: _mock().LAB_STRATEGIES)
+def get_lab_breakeven(code: str) -> dict[str, Any]:
+    """回本测算(§3.8.2)。真实返 {return_rate, breakeven_gain_pct, months_to_breakeven,...}。"""
+    return _fetch(f"/api/v1/funds/{code}/breakeven", lambda: {"available": False})
+
+
+def get_lab_scenarios(code: str) -> list[dict[str, Any]]:
+    """三情景推演(§3.8.2)。
+
+    真实返 {months, projections:{保守/基准/乐观:[curve]}, assumptions}；
+    适配为页面消费的列表 [{scenario, expected, final_value, impact}]。
+    mock 直接返列表。
+    """
+    data = _fetch(f"/api/v1/funds/{code}/scenarios", lambda: _mock().LAB_SCENARIOS)
+    if isinstance(data, list):
+        return data
+    # 真实后端 -> 适配为摘要表
+    rows: list[dict[str, Any]] = []
+    projections = data.get("projections", {}) if isinstance(data, dict) else {}
+    assumptions = data.get("assumptions", {}) if isinstance(data, dict) else {}
+    for key, label in _LAB_SCENARIO_LABEL.items():
+        curve = projections.get(key, [])
+        final = curve[-1]["value"] if curve else None
+        ann = assumptions.get(key)
+        rows.append({
+            "scenario": label,
+            "expected": ann,
+            "final_value": final,
+            "impact": "正收益" if (ann or 0) > 0 else "负收益",
+        })
+    return rows
+
+
+def get_lab_strategies(code: str) -> list[dict[str, Any]]:
+    """五策略对照(§3.8.2)。真实返 [{strategy,name,final_value,total_return,max_drawdown,note}]。"""
+    data = _fetch(f"/api/v1/funds/{code}/strategies", lambda: _mock().LAB_STRATEGIES)
+    if isinstance(data, list):
+        return data
+    return []
 
 
 # --- 持仓穿透(原型⑨ P3-01a/b) ---

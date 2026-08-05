@@ -26,6 +26,9 @@ ui.page_header(
 if api_client.is_mock():
     ui.mock_hint()
 
+# 基金代码(实验室基于真实净值推演，§3.8.6 OQ-25)
+fund_code = st.text_input("基金代码", value="000001.OF", help="输入基金代码(带后缀，如 000001.OF)")
+
 # --- 回本测算器(FR-40 · BR-10.1) ---
 bb_c, sc_c = st.columns(2)
 with bb_c:
@@ -49,14 +52,14 @@ with bb_c:
 # --- 情景推演(FR-41 · BR-10.2，含对持仓影响列) ---
 with sc_c:
     with ui.panel("情景推演", tag="FR-41 · BR-10.2 · 含对持仓影响"):
-        scs = api_client.get_lab_scenarios()
+        scs = api_client.get_lab_scenarios(fund_code)
         sdf = pd.DataFrame(
             [
                 {
                     "情景": s["scenario"],
-                    "目标点位": s["target"],
-                    "预期回报": utils.pct_text(s["expected"]),
-                    "对持仓影响": s["impact"],
+                    "预期年化": utils.pct_text(s.get("expected")),
+                    "终值": round(s["final_value"], 4) if s.get("final_value") else None,
+                    "对持仓影响": s.get("impact", ""),
                 }
                 for s in scs
             ]
@@ -67,13 +70,13 @@ st.divider()
 
 # --- 策略对照实验室(FR-42 · BR-10.3，五策略卡含回本联动) ---
 with ui.panel("策略对照实验室", tag="FR-42 · BR-10.3 · 五策略 + 回本联动"):
-    sts = api_client.get_lab_strategies()
+    sts = api_client.get_lab_strategies(fund_code)
     stgdf = pd.DataFrame(sts).rename(
         columns={
-            "strategy": "策略",
-            "cond": "适用条件",
-            "pro_con": "优劣",
-            "fit": "适合人群",
+            "name": "策略",
+            "total_return": "总收益",
+            "max_drawdown": "最大回撤",
+            "note": "说明",
         }
     )
     st.dataframe(stgdf, use_container_width=True, hide_index=True)
