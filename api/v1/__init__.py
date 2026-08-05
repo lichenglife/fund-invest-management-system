@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from . import admin, data, evaluation, health, paper, portfolio, screen
+from . import admin, data, evaluation, health, laboratory, paper, portfolio, screen
 
 router = APIRouter(prefix="/v1")
 router.include_router(health.router)
 router.include_router(admin.router)
 router.include_router(data.router)
+router.include_router(laboratory.router)
 router.include_router(evaluation.router)
 router.include_router(screen.router)
 router.include_router(paper.router)
