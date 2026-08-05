@@ -299,6 +299,40 @@ def get_portfolio_diagnosis(
     return rows
 
 
+def _first_portfolio_id() -> str | None:
+    """取首个组合 ID(无组合返 None)。"""
+    portfolios = get_portfolios()
+    if portfolios:
+        return portfolios[0].get("portfolio_id") or portfolios[0].get("code")
+    return None
+
+
+def get_portfolio_backtest(
+    portfolio_id: str | None = None, window: str = "3y"
+) -> dict[str, Any]:
+    """组合回测(§3.6.7，vs 自适应全收益基准 E14)。真实返 {cum_return,nav_curve,...}。"""
+    pid = portfolio_id or _first_portfolio_id()
+    if not pid:
+        return {"available": False, "note": "无组合"}
+    return _fetch(
+        f"/api/v1/portfolios/{pid}/backtest", lambda: {"available": False}, window=window
+    )
+
+
+def get_portfolio_rebalance(
+    portfolio_id: str | None = None, risk_type: str = "moderate"
+) -> dict[str, Any]:
+    """再平衡提醒(§3.6.5 / E8)。真实返 {rating, rebalance:[...], asset_dim}。"""
+    pid = portfolio_id or _first_portfolio_id()
+    if not pid:
+        return {"available": False, "rating": "green", "rebalance": []}
+    return _fetch(
+        f"/api/v1/portfolios/{pid}/rebalance",
+        lambda: {"rating": "green", "rebalance": []},
+        risk_type=risk_type,
+    )
+
+
 # --- 宏观看板(原型⑦ P2-01a/b) ---
 def _macro_mock() -> dict[str, Any]:
     s = _mock()

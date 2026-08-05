@@ -66,25 +66,45 @@ st.divider()
 # --- 历史回测(BR-5.2) + 再平衡(BR-5.5) ---
 bt_c, reb_c = st.columns(2)
 with bt_c:
-    with ui.panel("历史回测", tag="BR-5.2 · vs 沪深300 · 默认近3年"):
-        st.caption("回测曲线：组合 vs 沪深300 · 收益/回撤/夏普（统一后复权净值 E3/E14）")
-        # 用 110011 净值序列示意组合曲线
-        navs = store.nav_series("110011", days=180)
-        cdf = (
-            pd.DataFrame(navs)
-            .set_index("trade_date")[["adj_nav"]]
-            .rename(columns={"adj_nav": "组合"})
-        )
-        st.line_chart(cdf, use_container_width=True)
-        st.caption("区间可改 · 严格时序(禁未来函数)")
-with reb_c:
-    with ui.panel("再平衡提醒", tag="BR-5.5 · 偏离 ±5%"):
-        st.write("股债偏离阈值提醒，可设频率；给出再平衡建议")
-        drift = st.slider("当前股债偏离 (%)", 0, 20, 6)
-        if drift > 5:
-            st.warning(f"⚠ 偏离 {drift}% 超过 ±5% 阈值，建议再平衡")
+    with ui.panel("历史回测", tag="BR-5.2 · vs 沪深300全收益 · 默认近3年"):
+        bt = api_client.get_portfolio_backtest()
+        if bt.get("available") is False:
+            st.caption(bt.get("note", "回测数据不足(组合或净值缺失)"))
+            navs = store.nav_series("110011", days=180)  # mock 示意
+            cdf = pd.DataFrame(navs).set_index("trade_date")[["adj_nav"]].rename(
+                columns={"adj_nav": "组合(示意)"}
+            )
+            st.line_chart(cdf, use_container_width=True)
         else:
-            st.success(f"偏离 {drift}% 在阈值内，维持")
-        st.caption("相关性矩阵：成分基金两两相关(待后端计算)")
+            # 真实回测：画组合净值曲线 + 指标
+            curve = bt.get("nav_curve", [])
+            if curve:
+                cdf = pd.DataFrame(curve).set_index("date")[["nav"]].rename(columns={"nav": "组合"})
+                st.line_chart(cdf, use_container_width=True)
+            m1, m2, m3 = st.columns(3)
+            m1.metric("累计收益", utils.pct_text(bt.get("cum_return")))
+            m2.metric("最大回撤", utils.pct_text(bt.get("max_drawdown")))
+            m3.metric("夏普", f"{bt.get('sharpe'):.2f}" if bt.get("sharpe") is not None else "-")
+            if bt.get("bench"):
+                st.caption(
+                    f"基准 {bt['bench']} 累计 {utils.pct_text(bt.get('bench_cum_return'))}"
+                    f" · 超额 {utils.pct_text(bt.get('excess_cum'))}"
+                )
+            st.caption("统一后复权净值 E3/E14 · 严格时序(禁未来函数)")
+with reb_c:
+    with ui.panel("再平衡提醒", tag="BR-5.5 · 偏离 ±5% · E8"):
+        rb = api_client.get_portfolio_rebalance()
+        rating = rb.get("rating", "green")
+        if rating == "red":
+            st.error("🔴 触发再平衡阈值(偏离 >5% 或 止损红线)")
+        elif rating == "yellow":
+            st.warning("🟡 关注偏离")
+        else:
+            st.success("🟢 偏离在阈值内")
+        for item in rb.get("rebalance", []):
+            st.write(f"- {item.get('action', item.get('dim', ''))}")
+        if not rb.get("rebalance"):
+            st.caption("当前无需再平衡")
+        st.caption("股债偏离 >5% 触发(E8)；相关性矩阵待后端计算")
 
 ui.source_footer()
