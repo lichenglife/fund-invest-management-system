@@ -113,7 +113,23 @@ class EvaluationService:
         ADR-002(唯一权威源)：在线查询读批算结果(``scores`` 表，P1-05 夜算产出)，
         不重算横截面百分位(§3.3.9)；可调权重时用存储的子分即时重算 composite
         (分位表不变)。批算未运行 -> composite=None(不在线重算百分位)。
+
+        缓存(§2.8)：默认权重走 ``fund:score:{code}``(30min)；自定义权重不缓存。
         """
+        # 默认权重 -> 读缓存(§2.8)
+        from infra.redis.cache import cache_get, cache_set
+
+        if weights is None:
+            cached = cache_get("score", code=code)
+            if cached is not None:
+                return Score(
+                    code=cached["code"],
+                    composite=cached["composite"],
+                    factors=cached["factors"],
+                    weights=cached["weights"],
+                    as_of=cached["as_of"],
+                )
+
         fund = self.get_fund(code)
         if fund is None:
             return None
@@ -144,6 +160,15 @@ class EvaluationService:
                 weights=weights,
                 as_of=base.as_of,
             )
+        # 默认权重 -> 写缓存(§2.8)
+        cache_set(
+            "score", code=code,
+            value={
+                "code": base.code, "composite": base.composite,
+                "factors": base.factors, "weights": base.weights,
+                "as_of": base.as_of,
+            },
+        )
         return base
 
     # ------------------------------------------------------------------ 风格箱

@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_db
 from api.services.data import DataService
-from schemas.envelope import SOURCE_BATCH, SOURCE_REALTIME, Envelope
+from schemas.envelope import SOURCE_BATCH, SOURCE_CACHE, SOURCE_REALTIME, Envelope
 from schemas.errors import ExternalError, NotFoundError
 
 router = APIRouter(tags=["data"])
@@ -88,19 +88,23 @@ def discovery(
 def field_glossary(name: str) -> Envelope[dict[str, Any]]:
     """字段解释(field_glossary 表未建 D2 -> 内置词典降级)。
 
-    未知字段返 50301(数据源未就绪)。
+    缓存(§2.8)：fund:glossary:{field} TTL 1h。未知字段返 50301(数据源未就绪)。
     """
+    from infra.redis.cache import cache_get, cache_set
+
+    cached = cache_get("glossary", field=name)
+    if cached is not None:
+        return Envelope.ok(data=cached, source=SOURCE_CACHE, as_of=date.today())
+
     desc = _FIELD_GLOSSARY.get(name)
     if desc is None:
         raise ExternalError(
             f"字段「{name}」词典未配置(field_glossary 表待落地, D2)",
             code=None,  # 默认 50301
         )
-    return Envelope.ok(
-        data={"field": name, "description": desc},
-        source=SOURCE_BATCH,
-        as_of=date.today(),
-    )
+    data = {"field": name, "description": desc}
+    cache_set("glossary", field=name, value=data)
+    return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
 
 
 @router.get("/funds/{code}", summary="基金档案(§3.2.2)")
