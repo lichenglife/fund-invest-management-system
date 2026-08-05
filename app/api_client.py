@@ -54,15 +54,23 @@ class ApiClient:
             return body.get("data")
         raise ApiError(code, body.get("message") or "请求失败")
 
-    def get(self, path: str, **params: Any) -> Any:
-        return self._request("GET", path, params=params)
+    def get(self, path: str, *, headers: dict[str, str] | None = None, **params: Any) -> Any:
+        return self._request("GET", path, params=params, headers=headers)
 
-    def post(self, path: str, **json_body: Any) -> Any:
-        return self._request("POST", path, json=json_body)
+    def post(self, path: str, *, headers: dict[str, str] | None = None, **json_body: Any) -> Any:
+        return self._request("POST", path, json=json_body, headers=headers)
 
-    def _request(self, method: str, path: str, **kwargs: Any) -> Any:
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> Any:
         try:
-            resp = self._client.request(method, path, **kwargs)
+            resp = self._client.request(method, path, params=params, json=json, headers=headers)
             resp.raise_for_status()
             return self._unwrap(resp.json())
         except httpx.HTTPError as exc:
@@ -130,7 +138,7 @@ def _dashboard_mock(fund_type: str) -> dict[str, Any]:
 
 
 def get_dashboard(fund_type: str = "all") -> dict[str, Any]:
-    return _fetch("/api/v1/dashboard", lambda: _dashboard_mock(fund_type), fund_type=fund_type)
+    return _fetch("/api/v1/dashboard", lambda: _dashboard_mock(fund_type), type=fund_type)
 
 
 # --- 数据中心(原型② P1-02/P1-13a~c) ---
@@ -320,3 +328,102 @@ def _risk_mock() -> dict[str, Any]:
 
 def get_risk() -> dict[str, Any]:
     return _fetch("/api/v1/risk", _risk_mock)
+
+
+# --- 后台管理(详设§2.16 系统监控 / §3.14 任务调度与监控 / §2.19.6 管理端点鉴权 / P1-10b) ---
+#: 管理员会话令牌(登录后由页面 set_admin_token 写入；真实模式请求带 Bearer 头)。
+_ADMIN_TOKEN: str | None = None
+
+
+def set_admin_token(token: str | None) -> None:
+    """页面登录成功后写入令牌(§2.19.6 30min session)。"""
+    global _ADMIN_TOKEN
+    _ADMIN_TOKEN = token
+
+
+def _admin_login_mock() -> dict[str, Any]:
+    """Mock 登录(开发期；返回示例令牌，不校验密码)。"""
+    return {
+        "access_token": "mock-admin-token",
+        "must_change_password": False,
+        "expires_in_minutes": 30,
+    }
+
+
+def admin_login(username: str, password: str) -> dict[str, Any]:
+    """管理员登录(§2.19.6 AES 密码校验)；Mock 模式直接返示例令牌。"""
+    if MOCK_MODE:
+        token = _admin_login_mock()
+        set_admin_token(token["access_token"])
+        return token
+    try:
+        data = get_client().post("/api/v1/admin/login", username=username, password=password)
+        set_admin_token(data.get("access_token"))
+        return data
+    except ApiError:
+        return _admin_login_mock()
+
+
+def _admin_headers() -> dict[str, str]:
+    """构造 admin 鉴权头(§2.19.6 Bearer)。"""
+    return {"Authorization": f"Bearer {_ADMIN_TOKEN}"} if _ADMIN_TOKEN else {}
+
+
+def _admin_fetch(path: str, mock_fn: Callable[[], Any], **params: Any) -> Any:
+    """admin 鉴权请求：真实优先(带 Bearer)，失败/Mock 模式回退 mock_fn。"""
+    if MOCK_MODE:
+        return mock_fn()
+    try:
+        return get_client().get(path, headers=_admin_headers(), **params)
+    except ApiError as exc:
+        logger.info("api.fallback_to_mock", extra={"path": path, "err": str(exc)})
+        return mock_fn()
+
+
+def _admin_jobs_mock() -> list[dict[str, Any]]:
+    return _mock().ADMIN_JOBS
+
+
+def get_admin_jobs(limit: int = 100, days: int = 7) -> list[dict[str, Any]]:
+    """定时任务执行历史(§3.14.3 scheduler_jobs)。"""
+    return _admin_fetch("/api/v1/admin/jobs", _admin_jobs_mock, limit=limit, days=days)
+
+
+def _admin_monitor_mock() -> dict[str, Any]:
+    return _mock().ADMIN_MONITOR
+
+
+def get_admin_monitor() -> dict[str, Any]:
+    """§2.16 五维监控汇总(数据采集/数据质量/API/定时任务/资源)。"""
+    return _admin_fetch("/api/v1/admin/monitor", _admin_monitor_mock)
+
+
+def _admin_quality_mock() -> dict[str, Any]:
+    return _mock().ADMIN_QUALITY
+
+
+def get_admin_quality() -> dict[str, Any]:
+    """数据质量看板(对齐 P2-03c /quality/dashboard)。"""
+    return _admin_fetch("/api/v1/admin/quality", _admin_quality_mock)
+
+
+def _admin_change_mock() -> dict[str, Any]:
+    return _mock().ADMIN_CHANGE_ASSESSMENT
+
+
+def get_admin_change_assessment() -> dict[str, Any]:
+    """变更评审评估(开发规范§9.3 OQ + §2.16 阈值触发)。"""
+    return _admin_fetch("/api/v1/admin/change-assessment", _admin_change_mock)
+
+
+def trigger_admin_job(job: str, **kwargs: Any) -> dict[str, Any]:
+    """手动触发采集作业(§3.14.4，须管理员)；Mock 模式返示例结果。"""
+    if MOCK_MODE:
+        return {"upserted": 1, "job": job, "trigger": "manual", "status": "success"}
+    try:
+        return get_client().post(
+            "/api/v1/admin/trigger-job", headers=_admin_headers(), job=job, **kwargs
+        )
+    except ApiError as exc:
+        logger.info("api.fallback_to_mock", extra={"path": "trigger-job", "err": str(exc)})
+        return {"upserted": 0, "job": job, "trigger": "manual", "status": "failed"}

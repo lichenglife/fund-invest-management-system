@@ -25,20 +25,22 @@ router = APIRouter(tags=["dashboard"])
 def get_dashboard(
     db: Annotated[Session, Depends(get_db)],
     account_id: str = Query(default=DEFAULT_ACCOUNT, description="账户 ID"),
+    type: str = Query(default="all", description="Top10 类型(all/stock/mixed/bond/etf/qdii/money)"),
 ) -> Envelope[dict[str, Any]]:
     """聚合首页四区：状态卡 / Top10 / 近期动态 / 学一基。
 
+    ``type=all`` 跨类型取 Top10；否则按类型过滤(§3.13.2 类型 Tab)。
     命中缓存时 source=cache，否则 source=batch(§3.13.5)。
     """
     from infra.redis.cache import cache_get, cache_set
 
-    cached = cache_get("dashboard", account_id=account_id)
+    cached = cache_get("dashboard", account_id=account_id, type=type)
     if cached is not None:
         return Envelope.ok(data=cached, source=SOURCE_CACHE, as_of=date.today())
 
     svc = DashboardService(db)
-    data = svc.aggregate(account_id=account_id)
-    cache_set("dashboard", account_id=account_id, value=data)
+    data = svc.aggregate(account_id=account_id, fund_type=type)
+    cache_set("dashboard", account_id=account_id, type=type, value=data)
     return Envelope.ok(data=data, source=SOURCE_BATCH, as_of=date.today())
 
 

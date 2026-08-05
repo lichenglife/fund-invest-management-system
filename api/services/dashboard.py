@@ -34,10 +34,12 @@ class DashboardService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def aggregate(self, *, account_id: str = DEFAULT_ACCOUNT) -> dict[str, Any]:
+    def aggregate(
+        self, *, account_id: str = DEFAULT_ACCOUNT, fund_type: str = DEFAULT_TOP_TYPE
+    ) -> dict[str, Any]:
         """聚合仪表盘视图(§3.13.2 / §2.21.2 schema)。
 
-        顶层缓存由调用方(endpoint)持有 fund:dashboard:{account_id}；本方法仅聚合，
+        顶层缓存由调用方(endpoint)持有 fund:dashboard:{account_id}:{type}；本方法仅聚合，
         子缓存 fund:top10:{type} 在 ``_top10`` 内部。
         """
         view: dict[str, Any] = {
@@ -45,7 +47,7 @@ class DashboardService:
             "benchmark_return": None,  # MVP：基准收益待 macro 模块(P2-01)
             "todos": self._todos(account_id),
             "learning_progress": 0.0,  # learning_paths 未建(D2) -> 0
-            "top10": self._top10(DEFAULT_TOP_TYPE),
+            "top10": self._top10(fund_type),
             "dynamics": self._dynamics(),
             "learn_one": self._learn_one(),
         }
@@ -70,21 +72,25 @@ class DashboardService:
     # ------------------------------------------------------------------
 
     def _top10(self, fund_type: str) -> list[dict[str, Any]]:
-        """类型 Tab Top10 综合评分(§3.13.2 / DC-003 唯一权威源)。"""
+        """类型 Tab Top10 综合评分(§3.13.2 / DC-003 唯一权威源)。
+
+        ``fund_type=all`` 跨类型取 Top10；否则按类型过滤。
+        """
         from infra.redis.cache import cache_get, cache_set
 
         cached = cache_get("top10", type=fund_type)
         if cached is not None:
             return list(cached)
 
-        # JOIN scores + funds，按类型过滤，composite 降序取前 10
-        rows = self.db.execute(
+        stmt = (
             select(Fund.code, Fund.name, Fund.type_, Score.composite, Score.as_of)
             .join(Score, Score.code == Fund.code)
-            .where(Fund.type_ == fund_type)
             .order_by(Score.composite.desc())
             .limit(10)
-        ).all()
+        )
+        if fund_type != "all":
+            stmt = stmt.where(Fund.type_ == fund_type)
+        rows = self.db.execute(stmt).all()
         items = [
             {
                 "code": r.code,

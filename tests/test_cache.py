@@ -43,7 +43,9 @@ class TestCacheKey:
         assert cache_key("score", code="000001.OF") == "fund:score:000001.OF"
 
     def test_dashboard_key(self) -> None:
-        assert cache_key("dashboard", account_id="default") == "fund:dashboard:default"
+        assert cache_key("dashboard", account_id="default", type="mixed") == (
+            "fund:dashboard:default:mixed"
+        )
 
     def test_top10_key(self) -> None:
         assert cache_key("top10", type="stock") == "fund:top10:stock"
@@ -137,8 +139,8 @@ class TestDegradation:
 
     def test_redis_unavailable_does_not_block(self) -> None:
         """Redis 不可用时 set/get/delete 均不抛异常。"""
-        cache_set("dashboard", account_id="x", value={"k": "v"})
-        assert cache_get("dashboard", account_id="x") == {"k": "v"}
-        cache_delete("dashboard", account_id="x")
+        cache_set("dashboard", account_id="x", type="mixed", value={"k": "v"})
+        assert cache_get("dashboard", account_id="x", type="mixed") == {"k": "v"}
+        cache_delete("dashboard", account_id="x", type="mixed")
         # 多次调用不崩溃
-        cache_get("dashboard", account_id="x")
+        cache_get("dashboard", account_id="x", type="mixed")

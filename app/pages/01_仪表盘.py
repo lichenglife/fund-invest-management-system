@@ -72,7 +72,7 @@ with top_cols[1]:
 tabs_cfg = [
     ("全部", "all"),
     ("股票型", "stock"),
-    ("混合型", "mix"),
+    ("混合型", "mixed"),
     ("指数/ETF", "etf"),
     ("债券型", "bond"),
     ("QDII", "qdii"),

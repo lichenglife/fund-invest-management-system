@@ -34,7 +34,7 @@ TTL: dict[str, int] = {
 
 #: Key 模板(§2.8)。
 KEY_TPL: dict[str, str] = {
-    "dashboard": "fund:dashboard:{account_id}",
+    "dashboard": "fund:dashboard:{account_id}:{type}",
     "top10": "fund:top10:{type}",
     "score": "fund:score:{code}",
     "intraday": "fund:intraday:{code}",
