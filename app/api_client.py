@@ -189,18 +189,44 @@ def get_holdings(code: str) -> list[dict[str, Any]]:
 def screen_funds(
     filters: dict[str, Any] | None = None, sort_by: str = "综合评分"
 ) -> list[dict[str, Any]]:
-    """表单筛选 + 排序(本地演示)；NL 解析、去重见 store。
+    """表单筛选 + 排序(§3.4.6)。
 
-    筛选口径(滑杆为百分点，指标为比率，故阈值 ÷100)：
-    - ``fund_type``/``theme`` 等值过滤；
-    - ``max_drawdown`` ≤ 阈值(回撤为负值，|drawdown| 越小越好 -> drawdown ≥ -阈值/100)；
-    - ``min_return`` ≥ 阈值/100；``min_tenure`` ≥ 年。
-    排序：综合评分 / 夏普 / 回撤(升序，越小越好) / 年化(降序)。
-    真实接口由后端向量化过滤；此处 Mock 形状与之一致(切换零改动)。
+    真实模式：POST /api/v1/screen(后端支持 type/theme/score 过滤 + 排序)；
+    metric 过滤(回撤/收益/任期)后端暂不支持 -> 真实模式仅 type/theme/score(降级)。
+    Mock 模式：本地全量过滤(滑杆阈值 ÷100)。
     """
+    f = filters or {}
+    sort_map: dict[str, str] = {
+        "综合评分": "composite",
+        "夏普": "sharpe",
+        "年化": "return_pct",
+        "回撤": "max_drawdown",
+    }
+    sort_field = sort_map.get(sort_by, "composite")
+    order = "asc" if sort_by == "回撤" else "desc"
+
+    # 真实模式：后端向量化过滤(type/theme/score)
+    if not MOCK_MODE:
+        backend_filters: list[dict[str, Any]] = []
+        if f.get("fund_type") and f["fund_type"] != "all":
+            backend_filters.append({"field": "type", "op": "=", "value": f["fund_type"]})
+        if f.get("theme") and f["theme"] != "不限":
+            backend_filters.append({"field": "theme", "op": "=", "value": f["theme"]})
+        if f.get("min_score") is not None:
+            backend_filters.append({"field": "composite", "op": ">=", "value": f["min_score"]})
+        try:
+            data = get_client().post(
+                "/api/v1/screen",
+                filters=backend_filters, sort=sort_field, order=order,
+                page=1, page_size=100,
+            )
+            return data.get("items", []) if isinstance(data, dict) else []
+        except Exception as exc:  # noqa: BLE001
+            logger.info("api.fallback_to_mock", extra={"path": "/api/v1/screen", "err": str(exc)})
+
+    # Mock 模式：本地过滤(滑杆为百分点，指标为比率，阈值 ÷100)
     s = _mock()
     rows = list(s.FUNDS)
-    f = filters or {}
     if f.get("fund_type") and f["fund_type"] != "all":
         rows = [r for r in rows if r["type"] == f["fund_type"]]
     if f.get("theme") and f["theme"] != "不限":
@@ -229,14 +255,29 @@ def screen_funds(
 
 
 # --- 模拟交易(原型⑤ P1-07a~e;本地 session 记账) ---
-# 注：账户/持仓用 state.py 本地记账(不连后端)，以下仅初始/定投回测走降级链。
+# 注：账户/持仓用 state.py 本地记账(交互买卖)；以下只读看板走 /paper/portfolio。
+def get_paper_portfolio(account_id: str = "default") -> dict[str, Any]:
+    """持仓看板(§3.5.3)：现金/总资产/盈亏/持仓明细。"""
+    return _fetch(
+        "/api/v1/paper/portfolio", lambda: _mock().PAPER_ACCOUNT | {"positions": _mock().PAPER_POSITIONS},
+        account_id=account_id,
+    )
+
+
 def get_paper_account() -> dict[str, Any]:
-    """初始账户(后端就绪后从 /api/v1/paper/account 取真实)。"""
-    return _fetch("/api/v1/paper/account", lambda: _mock().PAPER_ACCOUNT)
+    """初始账户(后端 /paper/portfolio 取 account 字段)。"""
+    data = get_paper_portfolio()
+    if isinstance(data, dict) and "positions" in data:
+        return {k: v for k, v in data.items() if k != "positions"}
+    return data
 
 
 def get_paper_positions() -> list[dict[str, Any]]:
-    return _fetch("/api/v1/paper/positions", lambda: _mock().PAPER_POSITIONS)
+    """持仓列表(后端 /paper/portfolio 取 positions 字段)。"""
+    data = get_paper_portfolio()
+    if isinstance(data, dict):
+        return data.get("positions", [])
+    return []
 
 
 def get_dca_backtest() -> dict[str, Any]:
