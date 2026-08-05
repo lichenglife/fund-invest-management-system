@@ -243,13 +243,60 @@ def get_dca_backtest() -> dict[str, Any]:
     return _fetch("/api/v1/paper/dca-backtest", lambda: _mock().DCA_BACKTEST)
 
 
+def run_dca_backtest(
+    code: str, freq: str = "monthly", amount: float = 1000.0
+) -> dict[str, Any]:
+    """定投回测(§3.5.8，POST)。真实返 {cum_invest,final_value,irr,...}。"""
+    return get_client().post(
+        "/api/v1/paper/dca-backtest",
+        code=code, freq=freq, amount=amount,
+    )
+
+
 # --- 组合配置(原型⑥ P1-08a~d) ---
-def get_portfolio_components() -> list[dict[str, Any]]:
-    return _fetch("/api/v1/portfolio/components", lambda: _mock().PORTFOLIO_COMPONENTS)
+def get_portfolios() -> list[dict[str, Any]]:
+    """列出组合(§3.6.5)。真实返 list；mock 返 PORTFOLIO_COMPONENTS。"""
+    data = _fetch("/api/v1/portfolios", lambda: _mock().PORTFOLIO_COMPONENTS)
+    if isinstance(data, list):
+        return data
+    return data.get("items", []) if isinstance(data, dict) else []
 
 
-def get_portfolio_diagnosis() -> list[dict[str, Any]]:
-    return _fetch("/api/v1/portfolio/diagnosis", lambda: _mock().PORTFOLIO_DIAGNOSIS)
+_DIAG_LEVEL = {"red": "r", "yellow": "y", "green": "g"}
+
+
+def get_portfolio_diagnosis(
+    portfolio_id: str | None = None, risk_type: str = "moderate"
+) -> list[dict[str, Any]]:
+    """组合诊断(§3.6.6.1 / TP-03)。
+
+    ``portfolio_id=None`` 时自动取首个组合；真实后端返 {per_dim, rating,...}，
+    适配为 diagnosis_table 消费的行列表 [{dim,status,level,advice}]。
+    """
+    if portfolio_id is None:
+        portfolios = get_portfolios()
+        if portfolios:
+            portfolio_id = portfolios[0].get("portfolio_id") or portfolios[0].get("code")
+    if not portfolio_id:
+        return _fetch("/api/v1/portfolios/_/diagnosis", lambda: _mock().PORTFOLIO_DIAGNOSIS)
+
+    data = _fetch(
+        f"/api/v1/portfolios/{portfolio_id}/diagnosis",
+        lambda: _mock().PORTFOLIO_DIAGNOSIS,
+        risk_type=risk_type,
+    )
+    if isinstance(data, list):
+        return data  # mock
+    per_dim = data.get("per_dim", {}) if isinstance(data, dict) else {}
+    rows: list[dict[str, Any]] = []
+    for dim, info in per_dim.items():
+        rows.append({
+            "dim": info.get("dim", dim),
+            "status": info.get("detail", ""),
+            "level": _DIAG_LEVEL.get(info.get("status", ""), "g"),
+            "advice": info.get("advice", ""),
+        })
+    return rows
 
 
 # --- 宏观看板(原型⑦ P2-01a/b) ---
