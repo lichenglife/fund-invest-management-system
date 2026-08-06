@@ -4,6 +4,37 @@
 
 ---
 
+## [Unreleased] - 2026-08-06
+
+### Added
+- **阶段评审报告**：`docs/.../14_阶段评审/REVIEW_20260806.md`（Phase 1 主体闭环，Go 有条件；重点记录口径冲突与质量逃逸）
+- **P1-22 部署运行**：compose 生产化(ENV/Secrets/卷/健康检查/迁移/worker 常驻) + `scripts/init_db.py` 建表（§2.5/§9.1，`3f8d2be`）
+- **P1-21 集成测试**：3 链路 6 用例（采集->质量 / ADR-002 评估->筛选->仪表盘 / 模拟->组合->诊断，`5dffcdb`）
+- **P1-06b NL 解析 LLM 增强**：规则层移植 nl_baseline + LLM 编排(rule fast-path+LLM+normalize+clarify) + 160 条评测门禁；合并 strict=0.90≥0.85 实测 PASS；E6 裁决=TYPE 约束（`5ab00c2`）
+- P1-11 Redis 缓存层 + P1-12 仪表盘聚合接口 + P1-09 实验室 + P1-08 组合诊断/回测/再平衡 + P1-07c/d/e 回本/定投/reset（`1387daf`~`ebd3a3a`）
+- P1-13~19 前端 12+1 页契约对齐真实后端（`83f21a3`~`458175d`）
+- `infra/external/llm_client.py` async DeepSeek 客户端 + `domain/nl_eval.py` 评测模块
+
+### Changed
+- **E6 红线口径**：稳健/低风险 由 exclude[index,etf] 改为 **TYPE 约束**(type∈[bond,mixed])，化解 §4 与 §12 评测 oracle 冲突（`5ab00c2`）
+- Dockerfile/CI/Makefile 补装 `requirements-extras.txt`（原缺 pandas/akshare/alembic/APScheduler 等运行时依赖，`3f8d2be`）
+- docker-compose.yml 生产化：密钥外部化(env_file+POSTGRES_*派生)、资源限制、migrate 一次性服务、worker 常驻调度、4 服务共享 fundlens-app 镜像（`3f8d2be`）
+- `/api/screen/nl` 异步化：key 注入走 LLM 管线，无 key 规则兜底（`5ab00c2`）
+
+### Fixed
+- **全量测试 49 DB ERROR**：`test_health.py`/`test_laboratory_api.py` 自建 create_engine+drop_all 污染共享引擎，改用 conftest 共享夹具；全量 518 passed/0 ERROR（`5dffcdb`）
+- **.env.example 提交真实密钥**：TUSHARE_TOKEN/LLM_API_KEY 置空占位（§9 违规，历史 key 须轮换，`3f8d2be`）
+- 任务分解文档状态失同步：P1-16a/17a/06b/20a/b 等标为实际已完成
+
+### Known Issues (DEFERRED)
+- **D10(新) P0-04b 迁移链损坏**：5 个 alembic migration 重复建表，干净库 `alembic upgrade head` 失败；MVP 用 create_all 兜底，P1-23 前须修
+- D9 NL SLA **已随 P1-06b 闭环**(0.90)，台账待更新
+- D6 adj_nav 临时回退 acc_nav（待真实复权，E3 近似）
+- .env 密钥历史泄露（须轮换，git 历史不可删）
+- D1/D2/D5/D7 延期项（不阻塞 Phase 1 主干）
+
+---
+
 ## [Unreleased] - 2026-07-30
 
 ### Added

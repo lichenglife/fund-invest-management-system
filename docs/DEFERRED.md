@@ -104,6 +104,7 @@
 - **当前处理**：P1-06b 交付规则兜底层(domain/nl_parse.py) + E6 红线(稳健排除 index/etf) + 端点(POST /api/screen/nl)；LLM 增强待 C1。
 - **影响**：NL 选基在 LLM key 注入前准确率未达 SLA；规则层可用但需 LLM 增强。
 - **建议处置时点**：C1 LLM key/供应商确认后，加 LLM 解析 + 规则兜底 + 澄清管线(对齐 TP-02 / nl_parse_LLM提示词设计稿)。
+> ✅ **已解决 @ 5ab00c2**：P1-06b 落地 LLM 增强(rule fast-path + LLM + rule_normalize + clarify 管线) + 160 条评测门禁；用 DeepSeek key 实测合并 160 条 strict=0.90 ≥ 0.85 SLA。E6 口径裁决为 TYPE 约束(稳健->type∈[bond,mixed])。
 
 ---
 
@@ -111,7 +112,17 @@
 
 ---
 
-## 解决状态汇总（2025-07-29 更新）
+## D10 · alembic 迁移链 autogenerate 重复建表（P0-04b）
+
+- **发现来源**：P1-22 部署运行 `alembic upgrade head` 在干净库跑时。5 个 migration(`migrations/versions/*.py`)均用 `alembic revision --autogenerate` 生成，但生成时目标库缺前序迁移建的表，导致每个 migration 都重复 `create_table` 全部核心表(funds/navs/scores/paper_*/...)。第二个迁移起报 `DuplicateTable: relation "funds" already exists`。
+- **性质**：迁移脚本缺陷（autogenerate 未考虑前序迁移已建表）。测试一直用 `Base.metadata.create_all`(conftest db_engine)从未端到端跑过 alembic，故未暴露。
+- **当前处理**：P1-22 部署 migrate 改用 `scripts/init_db.py`(`Base.metadata.create_all`，与 ORM 模型/测试同口径，已验证建 14 表)兜底；compose migrate 服务不跑 `alembic upgrade head`。
+- **影响**：干净库无法 `alembic upgrade head`；schema 演进(后续 alembic revision)受阻塞。
+- **建议处置时点**：**P1-23 上线前**。重写迁移链：每个 migration 只建本任务新增表(admin_users/data_quality_log/fund_dividends/scheduler_jobs + initial_core)，或重生成单一干净 initial migration。详见 REVIEW_20260806 行动项 A1。
+
+---
+
+## 解决状态汇总（2026-08-06 更新）
 
 | 条目 | 状态 | 处置 | 关联 commit |
 |------|------|------|-------------|
@@ -123,5 +134,7 @@
 | D6 · acc_nav/adj_nav 口径 | 🔄 部分解决 | acc_nav 已补(P1-01c)；adj_nav 临时回退 acc_nav，待 TP-04 分红复权 | P1-01c |
 | D7 · funds 表字段不一致 | 📌 延期 | 按详设§2.20.2 建模；DC-002 全类型待 P1-02 补字段 | - |
 | D8 · empyrical/numpy兼容+因子命名 | 🔄 部分解决 | sortino 自实现；因子命名以红线为准，待 P1-03b 统一 | P1-03a |
+| D9 · NL 规则层未达 85% SLA | ✅ 已解决 | P1-06b LLM+规则+澄清管线，160 条 strict=0.90≥0.85；E6 裁决=TYPE 约束 | 5ab00c2 |
+| D10 · alembic 迁移链 autogenerate 重复建表 | 📌 未闭环（高） | P1-22 用 create_all 兜底；P1-23 前重写迁移链（详见 REVIEW_20260806 A1） | P0-04b |
 
 > 注：本文件原以非 UTF-8 编码入库，本次重写为标准 UTF-8。
