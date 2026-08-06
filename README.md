@@ -43,13 +43,17 @@ docs/基金评估系统_交付文档/   全部交付文档（需求/设计/TP/�
 
 ```bash
 cp .env.example .env          # 占位配置（密钥勿入库）
-docker compose up -d          # 起 postgres/redis/api/worker/streamlit
+# ⚠ 生产部署：改 .env 的 POSTGRES_PASSWORD/AES_KEY/JWT_SECRET/LLM_API_KEY 为真实值，APP_ENV=prod
+docker compose up -d          # 起 postgres/redis -> migrate(建表) -> api/worker/streamlit
 # API:       http://localhost:18000  (健康: /api/v1/health, 文档: /api/docs)
 # Streamlit: http://localhost:18501
-# Postgres:  localhost:15432  (fundlens/changeme)
+# Postgres:  localhost:15432  (fundlens/<POSTGRES_PASSWORD>)
 # Redis:     localhost:16379
+docker compose logs -f migrate api   # 查看迁移与 API 日志
 ```
 
+> 启动顺序(P1-22)：postgres/redis(健康检查通过) -> `migrate` 一次性 `alembic upgrade head` 建表(退出 0) -> api(健康检查) -> streamlit。worker 常驻 APScheduler，工作日 18:00 增量采集(§3.14.2)。
+> 密钥全部经 `.env` 注入(§9.1)，compose 仅引用 `${VAR}` 不落明文；DATABASE_URL 由 POSTGRES_* 派生(密码单源)。
 > 宿主端口已避让既有占用（API 18000 / Streamlit 18501 / PG 15432 / Redis 16379）；容器内部仍用标准端口，服务间通过 compose 服务名互联。本地非 docker 开发（`uvicorn` / `streamlit run`）仍用 8000 / 8501 默认端口。
 
 ### 本地开发

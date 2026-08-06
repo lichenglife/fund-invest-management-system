@@ -7,13 +7,16 @@ FROM python:3.11-slim AS base
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=120
 
 WORKDIR /app
 
-# 依赖先行（利用层缓存）
-COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+# 依赖先行（利用层缓存）：
+# - requirements.txt：Web 栈；requirements-extras.txt：运行时域依赖(pandas/akshare/alembic/APScheduler/empyrical 等，P1-22 部署必需)
+# - requirements-dev.txt：测试/lint(镜像内可跑测试；生产可瘦身)
+COPY requirements.txt requirements-dev.txt requirements-extras.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-extras.txt -r requirements-dev.txt
 
 # 应用代码
 COPY . .

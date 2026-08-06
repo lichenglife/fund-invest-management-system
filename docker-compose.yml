@@ -1,23 +1,34 @@
-# docker-compose.yml · FundLens 开发栈（详设§2.5 部署 / §2.13 运行环境 / ADR-003/004）
-# 一键起：docker compose up -d
-# 生产化(P1-22)：用 .env / Docker Secrets 注入密钥，加资源限制与健康监控。
+# docker-compose.yml · FundLens 生产栈（详设§2.5 部署 / §2.13 运行环境 / §9.1 配置外部化 / ADR-003/004）
+#
+# 一键起（P1-22）：``cp .env.example .env`` 填真实密钥 -> ``docker compose up -d``
+# 密钥全部经 .env 注入(§9.1/§5.3，禁止入库)；compose 仅引用 ${VAR}，不落明文。
+# 依赖顺序：postgres/redis(healthy) -> migrate(完成 0) -> api/streamlit；worker 常驻调度。
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: fundlens
-      POSTGRES_USER: fundlens
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: ${POSTGRES_DB:-fundlens}
+      POSTGRES_USER: ${POSTGRES_USER:-fundlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     ports:
       - "15432:5432"  # 宿主端口避让既有占用(见 README)
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fundlens -d fundlens"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fundlens} -d ${POSTGRES_DB:-fundlens}"]
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+    logging: &default-log
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
 
   redis:
     image: redis:7-alpine
@@ -30,14 +41,42 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    logging: *default-log
+
+  # 一次性建表：create_all 全部 ORM 表(§2.20)；alembic 迁移链待修(P0-04b 重复建表)，MVP 用 create_all
+  migrate:
+    image: fundlens-app:latest  # 与 api/worker/streamlit 共用同一镜像(一次构建)
+    build: .
+    command: python scripts/init_db.py
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # 容器内用服务名 postgres；DATABASE_URL 由 POSTGRES_* 派生(密码单源)
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-fundlens}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-fundlens}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "on-failure"
+    logging: *default-log
 
   api:
+    image: fundlens-app:latest  # 与 worker/streamlit/migrate 共用镜像
     build: .
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    command: >
+      uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    env_file:
+      - path: .env
+        required: false
     environment:
-      APP_ENV: dev
-      LOG_LEVEL: INFO
-      DATABASE_URL: postgresql+psycopg://fundlens:changeme@postgres:5432/fundlens
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-fundlens}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-fundlens}
       REDIS_URL: redis://redis:6379/0
       STREAMLIT_API_BASE: http://api:8000
     ports:
@@ -47,6 +86,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD-SHELL
@@ -54,38 +95,72 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 15s
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.5"
+    logging: *default-log
 
+  # 采集调度 worker：常驻 APScheduler，工作日 18:00 增量采集(§3.14.2)
+  # 批算(P1-05 夜算)/周报(P3)随各自任务；MVP 仅编排采集(详设§3.14.2)。
   worker:
+    image: fundlens-app:latest
     build: .
-    # 采集 worker 占位(P1-01d 接 APScheduler 后改为常驻调度)
-    command: python -m workers.collect
+    command: python -m workers.collect --scheduler
+    env_file:
+      - path: .env
+        required: false
     environment:
-      APP_ENV: dev
-      LOG_LEVEL: INFO
-      DATABASE_URL: postgresql+psycopg://fundlens:changeme@postgres:5432/fundlens
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-fundlens}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-fundlens}
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: "no"
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+    logging: *default-log
 
   streamlit:
+    image: fundlens-app:latest
     build: .
     command: >
       streamlit run app/app.py
       --server.port 8501 --server.address 0.0.0.0
       --server.fileWatcherType none
+    env_file:
+      - path: .env
+        required: false
     environment:
-      APP_ENV: dev
       STREAMLIT_API_BASE: http://api:8000
     ports:
       - "18501:8501"  # 宿主端口避让既有占用(容器内仍 8501)
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8501/_stcore/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging: *default-log
 
 volumes:
   pgdata:
