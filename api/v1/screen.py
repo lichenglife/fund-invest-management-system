@@ -119,18 +119,24 @@ class NLParsePayload(BaseModel):
     context: dict[str, Any] | None = Field(default=None, description="上下文(account_id 等)")
 
 
-@router.post("/screen/nl", summary="NL 解析(规则+澄清, §3.4.7, E6)")
-def screen_nl(
+@router.post("/screen/nl", summary="NL 解析(规则+LLM+澄清, §3.4.7, E6)")
+async def screen_nl(
     payload: NLParsePayload,
 ) -> Envelope[dict[str, Any]]:
     """自然语言解析 -> 结构化条件或反问(§3.4.7 / DC-004 / E6 红线)。
 
-    规则兜底层(LLM 增强待 C1 key)；歧义返回 clarify，不臆测。
-    E6：稳健/低风险 -> type∈[bond,mixed] 排除 index/etf。
+    生产解析器 = 规则兜底 + LLM 语义解析 + 歧义反问(TP-02 / 提示词稿§6)：
+    - ``LLM_API_KEY`` 注入 -> 走 ``nl_parse_with_llm``(规则 fast-path + LLM + normalize)；
+    - 无 key -> 规则兜底层(同步)，不阻塞主流程(§2.15 降级)。
+    E6：稳健/低风险 -> type∈[bond,mixed](§4 红线，禁止回退)。
     """
-    from domain.nl_parse import nl_parse
+    from config.settings import get_settings
+    from domain.nl_parse import nl_parse, nl_parse_with_llm
 
-    result = nl_parse(payload.query, context=payload.context)
+    if get_settings().llm_api_key:
+        result = await nl_parse_with_llm(payload.query, context=payload.context)
+    else:
+        result = nl_parse(payload.query, context=payload.context)
     return Envelope.ok(data=result.to_dict(), source=SOURCE_REALTIME, as_of=date.today())
 
 
