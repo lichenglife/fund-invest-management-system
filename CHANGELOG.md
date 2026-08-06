@@ -7,6 +7,7 @@
 ## [Unreleased] - 2026-08-06
 
 ### Added
+- **数据库建表 DDL 交付文档**：`docs/.../15_数据库DDL/`（`数据库建表DDL.md` + `schema.sql`，alembic 迁移链离线生成 14 表 DDL，与 create_all 0 drift）
 - **阶段评审报告**：`docs/.../14_阶段评审/REVIEW_20260806.md`（Phase 1 主体闭环，Go 有条件；重点记录口径冲突与质量逃逸）
 - **P1-22 部署运行**：compose 生产化(ENV/Secrets/卷/健康检查/迁移/worker 常驻) + `scripts/init_db.py` 建表（§2.5/§9.1，`3f8d2be`）
 - **P1-21 集成测试**：3 链路 6 用例（采集->质量 / ADR-002 评估->筛选->仪表盘 / 模拟->组合->诊断，`5dffcdb`）
@@ -19,16 +20,18 @@
 - **E6 红线口径**：稳健/低风险 由 exclude[index,etf] 改为 **TYPE 约束**(type∈[bond,mixed])，化解 §4 与 §12 评测 oracle 冲突（`5ab00c2`）
 - Dockerfile/CI/Makefile 补装 `requirements-extras.txt`（原缺 pandas/akshare/alembic/APScheduler 等运行时依赖，`3f8d2be`）
 - docker-compose.yml 生产化：密钥外部化(env_file+POSTGRES_*派生)、资源限制、migrate 一次性服务、worker 常驻调度、4 服务共享 fundlens-app 镜像（`3f8d2be`）
+- **`scripts/init_db.py` 改走 alembic 迁移链**：干净库 `alembic upgrade head`、历史 create_all 库 `stamp head` 收编、head 库幂等；compose migrate 服务回归迁移链（P0-04b 修复后）
 - `/api/screen/nl` 异步化：key 注入走 LLM 管线，无 key 规则兜底（`5ab00c2`）
 
 ### Fixed
+- **P0-04b 迁移链损坏**：5 个 alembic migration 各 autogenerate 重复建全部核心表，干净库 `alembic upgrade head` 报 DuplicateTable。重写 4 个非初始迁移使其只建本任务拥有的表（e2de76->admin_users / 2467->data_quality_log / 742d->fund_dividends / f3a1->scheduler_jobs+2索引），bb11 初始 10 核心表不变。`alembic upgrade head` 干净 PG 库顺序通过（14 表+alembic_version），downgrade base/再 upgrade 均通过，与 `create_all` 逐列逐索引比对 0 drift。详见 DEFERRED D10 / REVIEW_20260806 A1。
+- **scheduler_jobs.status/trigger 迁移漂移**：迁移中误带 `server_default`（模型用 Python `default=`），移除使迁移与 create_all 一致。
 - **全量测试 49 DB ERROR**：`test_health.py`/`test_laboratory_api.py` 自建 create_engine+drop_all 污染共享引擎，改用 conftest 共享夹具；全量 518 passed/0 ERROR（`5dffcdb`）
 - **.env.example 提交真实密钥**：TUSHARE_TOKEN/LLM_API_KEY 置空占位（§9 违规，历史 key 须轮换，`3f8d2be`）
 - 任务分解文档状态失同步：P1-16a/17a/06b/20a/b 等标为实际已完成
 
 ### Known Issues (DEFERRED)
-- **D10(新) P0-04b 迁移链损坏**：5 个 alembic migration 重复建表，干净库 `alembic upgrade head` 失败；MVP 用 create_all 兜底，P1-23 前须修
-- D9 NL SLA **已随 P1-06b 闭环**(0.90)，台账待更新
+- D10 P0-04b 迁移链 **已修**（重写 4 迁移，alembic upgrade head 通过，0 drift）；D9 NL SLA **已随 P1-06b 闭环**(0.90)
 - D6 adj_nav 临时回退 acc_nav（待真实复权，E3 近似）
 - .env 密钥历史泄露（须轮换，git 历史不可删）
 - D1/D2/D5/D7 延期项（不阻塞 Phase 1 主干）

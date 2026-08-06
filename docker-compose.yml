@@ -49,7 +49,7 @@ services:
           cpus: "0.5"
     logging: *default-log
 
-  # 一次性建表：create_all 全部 ORM 表(§2.20)；alembic 迁移链待修(P0-04b 重复建表)，MVP 用 create_all
+  # 一次性建表/迁移：走 alembic 迁移链(P0-04b 已修，§2.20)；init_db.py 含 stamp 收编历史 create_all 库
   migrate:
     image: fundlens-app:latest  # 与 api/worker/streamlit 共用同一镜像(一次构建)
     build: .

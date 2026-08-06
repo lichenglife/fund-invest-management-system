@@ -119,6 +119,7 @@
 - **当前处理**：P1-22 部署 migrate 改用 `scripts/init_db.py`(`Base.metadata.create_all`，与 ORM 模型/测试同口径，已验证建 14 表)兜底；compose migrate 服务不跑 `alembic upgrade head`。
 - **影响**：干净库无法 `alembic upgrade head`；schema 演进(后续 alembic revision)受阻塞。
 - **建议处置时点**：**P1-23 上线前**。重写迁移链：每个 migration 只建本任务新增表(admin_users/data_quality_log/fund_dividends/scheduler_jobs + initial_core)，或重生成单一干净 initial migration。详见 REVIEW_20260806 行动项 A1。
+> ✅ **已解决 @ 2026-08-06（本轮）**：重写 4 个非初始 migration，使其只建本任务拥有的表（e2de76→admin_users / 2467→data_quality_log / 742d→fund_dividends / f3a1→scheduler_jobs+2 索引）；bb11 初始 10 核心表不变。`alembic upgrade head` 在干净 PG 库顺序通过（14 应用表 + alembic_version），`downgrade base` 与再 upgrade 均通过。逐列/逐索引比对迁移产物与 `create_all` 完全一致（0 drift）。`scripts/init_db.py` 改走 alembic（含历史 create_all 库 stamp 收编），compose migrate 服务回归迁移链。建表 DDL 交付文档见 `15_数据库DDL/`。
 
 ---
 
@@ -135,6 +136,6 @@
 | D7 · funds 表字段不一致 | 📌 延期 | 按详设§2.20.2 建模；DC-002 全类型待 P1-02 补字段 | - |
 | D8 · empyrical/numpy兼容+因子命名 | 🔄 部分解决 | sortino 自实现；因子命名以红线为准，待 P1-03b 统一 | P1-03a |
 | D9 · NL 规则层未达 85% SLA | ✅ 已解决 | P1-06b LLM+规则+澄清管线，160 条 strict=0.90≥0.85；E6 裁决=TYPE 约束 | 5ab00c2 |
-| D10 · alembic 迁移链 autogenerate 重复建表 | 📌 未闭环（高） | P1-22 用 create_all 兜底；P1-23 前重写迁移链（详见 REVIEW_20260806 A1） | P0-04b |
+| D10 · alembic 迁移链 autogenerate 重复建表 | ✅ 已解决 | 重写 4 迁移各只建本表；alembic upgrade head 干净库通过；与 create_all 0 drift；init_db.py 改走 alembic+stamp 收编 | 本轮 |
 
 > 注：本文件原以非 UTF-8 编码入库，本次重写为标准 UTF-8。
