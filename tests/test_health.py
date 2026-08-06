@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine
 
 
 def test_health_returns_envelope(client: TestClient) -> None:
@@ -63,22 +64,19 @@ def test_app_error_mapped_to_envelope(client: TestClient) -> None:
 
 
 @pytest.mark.db
-def test_app_error_db(db_url: str) -> None:
-    """§8.2：DB 可用 + 基金不存在 -> NotFoundError(40002)->404 信封(确定性)。"""
+def test_app_error_db(engine: Engine) -> None:
+    """§8.2：DB 可用 + 基金不存在 -> NotFoundError(40002)->404 信封(确定性)。
+
+    复用 conftest 共享引擎(已建表 + truncate 清表)，不再自建 create_engine/drop_all。
+    """
     from collections.abc import Iterator
 
-    from sqlalchemy import create_engine
     from sqlalchemy.orm import Session, sessionmaker
 
-    import infra.db.models  # noqa: F401
     from api.deps import get_db
     from api.main import create_app
-    from infra.db import Base
 
-    eng = create_engine(db_url)
-    Base.metadata.drop_all(eng, checkfirst=True)
-    Base.metadata.create_all(eng)
-    TestSession = sessionmaker(bind=eng, autocommit=False, autoflush=False)
+    TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     def _override() -> Iterator[Session]:
         s = TestSession()
@@ -97,8 +95,6 @@ def test_app_error_db(db_url: str) -> None:
         assert body["data"] is None
         assert body["trace_id"]
     app.dependency_overrides.clear()
-    Base.metadata.drop_all(eng)
-    eng.dispose()
 
 
 def test_validation_error_mapped_40001(client: TestClient) -> None:
