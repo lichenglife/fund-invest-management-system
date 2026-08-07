@@ -8,16 +8,20 @@ from __future__ import annotations
 
 from typing import Any, SupportsFloat
 
-#: 设计令牌色(原型§5 金融翠绿专业风；与 app/static/style.css 权威源对齐)。
-#: 主色墨绿/翠绿仅用于品牌、收益、选中态；红仅用于亏损/风险数值，禁用于 active。
+#: 设计令牌色(原型§5 金融专业风 / 令牌 v2；与 app/static/style.css 权威源单向对齐)。
+#: 品牌墨绿/翠绿仅用于标识、选中态、主按钮；涨跌语义独立：COLOR_GAIN=红(涨)、COLOR_LOSS=绿(跌)。
 COLOR_GREEN_D = "#0A6B4A"  # 墨绿：品牌主色(对齐 style.css --brand-deep)
-COLOR_GREEN = "#16A34A"  # 翠绿：收益正/选中态高亮(对齐 style.css --brand)
+COLOR_GREEN = "#16A34A"  # 翠绿：品牌标识(对齐 style.css --brand)
 COLOR_BLUE = "#1D4ED8"  # 信息蓝
-COLOR_RED = "#E23B3B"  # 红：仅亏损/风险数值
+COLOR_RED = "#E23B3B"  # 红：涨跌语义=涨/正收益；亦用于风险数值
 COLOR_AMBER = "#B45309"  # 琥珀：警告
 COLOR_GRAY = "#6B7280"  # 次要文字
 
-#: level -> hex(原型 .rcard good/warn/bad 着色)。
+#: 涨跌语义色(红涨绿跌，A股惯例；全局唯一，对齐 style.css --color-gain/--color-loss)。
+COLOR_GAIN = COLOR_RED    # 涨 / 正收益
+COLOR_LOSS = COLOR_GREEN  # 跌 / 负收益
+
+#: level -> hex(原型 .rcard good/warn/bad 着色；状态语义：绿=安全/红=风险，与涨跌语义区分)。
 LEVEL_COLOR: dict[str, str] = {
     "good": COLOR_GREEN,
     "ok": COLOR_GREEN,
@@ -54,14 +58,14 @@ def status_badge(ok: bool) -> str:
 
 
 def pct_color(value: SupportsFloat | None) -> str:
-    """涨跌着色：A 股惯例 红涨(>0)/绿跌(<0)/灰(0或None)。"""
+    """涨跌着色(全局唯一 · 红涨绿跌/A股惯例)：涨(>0)=红、跌(<0)=绿、0或None=灰。"""
     if value is None:
         return COLOR_GRAY
     v = float(value)
     if v > 0:
-        return COLOR_RED
+        return COLOR_GAIN
     if v < 0:
-        return COLOR_GREEN
+        return COLOR_LOSS
     return COLOR_GRAY
 
 

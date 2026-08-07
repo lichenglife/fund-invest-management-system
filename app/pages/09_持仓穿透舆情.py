@@ -68,7 +68,7 @@ with fin_c:
                 color = utils.level_color(f["level"])
                 st.markdown(
                     f'<div style="border:1px solid {color};border-radius:6px;padding:8px 10px;'
-                    f'text-align:center"><div style="font-size:11px;color:#6B7280">{f["dim"]}</div>'
+                    f'text-align:center"><div style="font-size:11px;color:var(--text-muted)">{f["dim"]}</div>'
                     f'<div style="font-size:16px;font-weight:700;color:{color}">{f["value"]}</div>'
                     f'<div style="font-size:10px">{f["desc"]}</div></div>',
                     unsafe_allow_html=True,

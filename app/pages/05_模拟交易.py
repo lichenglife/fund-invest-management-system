@@ -60,7 +60,7 @@ ui.metric_row(
         {
             "k": "持仓市值",
             "v": utils.format_amount(acct["market_value"]),
-            "color": utils.COLOR_GREEN,
+            "color": utils.COLOR_GREEN_D,
         },
         {
             "k": "总收益",
