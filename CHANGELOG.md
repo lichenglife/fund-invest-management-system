@@ -7,6 +7,7 @@
 ## [Unreleased] - 2026-08-06
 
 ### Added
+- **任务执行监控闭环（A3 业务片 / §3.14.3 scheduler_jobs / §3.14.5 失败告警）**：新增 `domain.scheduler.record_job_run` 上下文管理器——开始即写 `status=running` 行、正常退出写 `success`+`result_summary`+`duration_ms`、异常写 `failed`+`error`(摘要截断 2000，§9 不存堆栈/SQL)并 **re-raise**；用**独立 session**(业务事务回滚仍保留执行记录)；`session_factory` 可注入(懒导入 infra，测试隔离)。接线 `workers/collect.py`(collect_all)+`workers/batch.py`(fund_recalc)，定时 `cron` 与手动 `manual` 区分 trigger 落库；`POST /admin/trigger-job` 参数校验先于记录(避免坏请求污染执行历史)。新增 `GET /api/v1/admin/jobs`(按 `started_at` 倒序，`days`/`limit` 过滤，7 字段信封，字段对齐前端 mock `ADMIN_JOBS`；须管理员 §2.19.6)。14 单测通过(recorder 7 + admin_jobs 7)。**范围**：仅任务执行结果落库 + 前端可查；§2.16 Prometheus 监控 / §2.14 备份 / `/monitor` 运维端点仍搁置(DEFERRED S1/S2/S6)。
 - **stylebox 风格箱算法（P1-04a 闭环 / TP-01 §3.5 / 闭合 E13 / DC-003）**：新增 `domain/stylebox.py` 九宫格(size 大/中/小 × value_growth 价值/平衡/成长)，持仓法(市值分布定 size + 估值/成长因子定 value_growth)+ 收益回归交叉验证(numpy OLS，载荷不显著 `|load|<0.3 且 p>0.1` -> `cv_flag=True`)；E13 限权益类(stock/mixed/index/etf)，债/货/QDII 不显示；回退链(基金披露风格 `is_proxy` / 持仓基本面缺失 / 无持仓)，同 PEG/ERP 代理范式降级 `available=False` 不硬算。接线 `/api/v1/funds/{code}/stylebox` 端点 + 组合诊断⑥风格维(`diagnose(fund_styles=...)`)。30 单测通过(domain 覆盖率 93%)。
 - **数据库建表 DDL 交付文档**：`docs/.../15_数据库DDL/`（`数据库建表DDL.md` + `schema.sql`，alembic 迁移链离线生成 14 表 DDL，与 create_all 0 drift）
 - **阶段评审报告**：`docs/.../14_阶段评审/REVIEW_20260806.md`（Phase 1 主体闭环，Go 有条件；重点记录口径冲突与质量逃逸）

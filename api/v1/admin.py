@@ -8,17 +8,21 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from datetime import UTC, date, datetime, timedelta
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.auth import get_current_admin
 from api.deps import get_db
 from config.settings import settings
 from domain.collect_service import CollectService
+from domain.scheduler import record_job_run
 from infra.db.models.admin import AdminUser
+from infra.db.models.scheduler import SchedulerJob
 from infra.security.crypto import encrypt, verify
 from infra.security.token import create_access_token
 from schemas.auth import ChangePasswordRequest, LoginData, LoginRequest, WhoAmIData
@@ -100,26 +104,75 @@ def trigger_job(
     db: Annotated[Session, Depends(get_db)],
     current: Annotated[AdminUser, Depends(get_current_admin)],
 ) -> Envelope[dict[str, int]]:
-    """手动触发采集作业(§3.14.4，须管理员 §2.19.6)。
+    """手动触发采集作业(§3.14.4，须管理员 §2.19.6)；执行结果落库 scheduler_jobs(§3.14.3)。
 
     未登录 40101、非管理员 40103(§3.14.5)；作业幂等(§3.14.6 锁防重)。
+    参数校验先于记录，避免坏请求污染执行历史。
     """
     # current 已鉴权(§6.4 依赖层)，此处不再散落判断
     _ = current
-    service = CollectService(db)
-    count: int
-    if req.job == "fund_list":
-        count = service.collect_fund_list()
-    elif req.job == "nav":
-        if not req.code:
-            raise ParamError("nav 作业需指定 code")
-        count = service.collect_nav(req.code, start=req.start or "", end=req.end or "")
-    elif req.job == "holdings":
-        if not req.code:
-            raise ParamError("holdings 作业需指定 code")
-        from datetime import date
-
-        count = service.collect_holdings(req.code, req.year or str(date.today().year))
-    else:
+    job_names = {"fund_list": "基金名单采集", "nav": "净值采集", "holdings": "重仓采集"}
+    if req.job not in job_names:
         raise ParamError(f"未知作业: {req.job}")
+    if req.job in ("nav", "holdings") and not req.code:
+        raise ParamError(f"{req.job} 作业需指定 code")
+
+    service = CollectService(db)
+    args = {"code": req.code, "start": req.start, "end": req.end, "year": req.year}
+    with record_job_run(
+        f"collect_{req.job}", job_names[req.job], trigger="manual", args=args
+    ) as run:
+        if req.job == "fund_list":
+            count = service.collect_fund_list()
+        elif req.job == "nav":
+            assert req.code is not None  # 已于 record_job_run 前校验(mypy narrowing)
+            count = service.collect_nav(req.code, start=req.start or "", end=req.end or "")
+        else:  # holdings
+            assert req.code is not None  # 已于 record_job_run 前校验(mypy narrowing)
+            count = service.collect_holdings(req.code, req.year or str(date.today().year))
+        run.result_summary = {"upserted": count}
     return Envelope.ok(data={"upserted": count}, source=SOURCE_REALTIME)
+
+
+@router.get("/jobs", summary="定时任务执行历史(§3.14.3 scheduler_jobs)")
+def list_jobs(
+    db: Annotated[Session, Depends(get_db)],
+    current: Annotated[AdminUser, Depends(get_current_admin)],
+    limit: int = Query(default=100, ge=1, le=500, description="返回条数上限"),
+    days: int = Query(default=7, ge=1, le=90, description="近 N 天"),
+) -> Envelope[list[dict[str, Any]]]:
+    """定时任务执行历史(每行=一次执行)；按 started_at 倒序(§3.14.3)。
+
+    须管理员(§2.19.6)；未登录 40101。前端后台管理页消费(对齐 mock ADMIN_JOBS)。
+    """
+    _ = current
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    rows = (
+        db.execute(
+            select(SchedulerJob)
+            .where(SchedulerJob.started_at >= cutoff)
+            .order_by(SchedulerJob.started_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+    data = [_job_to_dict(r) for r in rows]
+    return Envelope.ok(data=data, source=SOURCE_REALTIME)
+
+
+def _job_to_dict(row: SchedulerJob) -> dict[str, Any]:
+    """scheduler_jobs 行 -> dict(字段对齐前端 mock ADMIN_JOBS)。"""
+    return {
+        "id": row.id,
+        "job_id": row.job_id,
+        "job_name": row.job_name,
+        "trigger": row.trigger,
+        "status": row.status,
+        "started_at": row.started_at.isoformat() if row.started_at else None,
+        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+        "duration_ms": row.duration_ms,
+        "error": row.error,
+        "args": row.args,
+        "result_summary": row.result_summary,
+    }

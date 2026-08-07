@@ -54,26 +54,32 @@ def load_all_funds(db: Session, *, window: str = DEFAULT_EVAL_WINDOW) -> list[Fu
     return result
 
 
-def run_once(*, window: str = DEFAULT_EVAL_WINDOW) -> dict[str, int]:
-    """夜算单次：全市场评分 -> 写 PG + 刷 Redis(§3.3.9)。
+def run_once(*, window: str = DEFAULT_EVAL_WINDOW, trigger: str = "manual") -> dict[str, int]:
+    """夜算单次：全市场评分 -> 写 PG + 刷 Redis(§3.3.9)；执行结果落库 scheduler_jobs(§3.14.3)。
 
     Returns:
         {"funds": N, "scored": M, "cached": K} 统计。
     """
-    with SessionLocal() as db:
-        funds = load_all_funds(db, window=window)
-        pct = build_percentile_tables(funds, window=window)
-        results = batch_score_all(funds, pct)
-        # upsert scores 表(§3.3.9)
-        scored = _upsert_scores(db, results)
-        # 刷 Redis(§3.3.5 fund:score:{code} TTL 30min)
-        cached = _cache_scores(results)
+    from domain.scheduler import record_job_run
 
-    logger.info(
-        "batch.run_done",
-        extra={"action": "batch", "funds": len(funds), "scored": scored, "cached": cached},
-    )
-    return {"funds": len(funds), "scored": scored, "cached": cached}
+    with record_job_run(
+        "fund_recalc", "指标/评分重算", trigger=trigger, args={"window": window}
+    ) as run:
+        with SessionLocal() as db:
+            funds = load_all_funds(db, window=window)
+            pct = build_percentile_tables(funds, window=window)
+            results = batch_score_all(funds, pct)
+            # upsert scores 表(§3.3.9)
+            scored = _upsert_scores(db, results)
+            # 刷 Redis(§3.3.5 fund:score:{code} TTL 30min)
+            cached = _cache_scores(results)
+        result = {"funds": len(funds), "scored": scored, "cached": cached}
+        run.result_summary = result
+        logger.info(
+            "batch.run_done",
+            extra={"action": "batch", "funds": len(funds), "scored": scored, "cached": cached},
+        )
+        return result
 
 
 def _upsert_scores(db: Session, results: dict[str, dict[str, Any]]) -> int:

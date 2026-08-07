@@ -18,17 +18,22 @@ from infra.logging import setup_logging
 logger = logging.getLogger(__name__)
 
 
-def run_once(codes: list[str] | None = None) -> None:
-    """单次采集(名单 + 指定 codes 净值/重仓)。"""
+def run_once(codes: list[str] | None = None, *, trigger: str = "manual") -> None:
+    """单次采集(名单 + 指定 codes 净值/重仓)；执行结果落库 scheduler_jobs(§3.14.3)。"""
     from datetime import date
 
     from domain.collect_service import CollectService
+    from domain.scheduler import record_job_run
 
     codes = codes or []
     today = date.today().strftime("%Y%m%d")
-    with SessionLocal() as db:
-        service = CollectService(db)
-        result = service.collect_all(codes, start=today, end=today)
+    with record_job_run(
+        "collect_all", "增量采集(名单+净值+重仓)", trigger=trigger, args={"codes": codes}
+    ) as run:
+        with SessionLocal() as db:
+            service = CollectService(db)
+            result = service.collect_all(codes, start=today, end=today)
+        run.result_summary = result
     logger.info(
         "collect.run_done",
         extra={"action": "collect", "funds": result["funds"], "navs": result["navs"]},
@@ -41,11 +46,15 @@ def run_scheduler() -> None:
 
     from domain.scheduler import COLLECT_CRON, build_scheduler
 
+    def _cron_collect() -> None:
+        """定时触发(cron)，与手动 run_once 区分 trigger 落库(§3.14.4)。"""
+        run_once(trigger="cron")
+
     scheduler = build_scheduler(
         jobs=[
             {
                 "id": "collect_all",
-                "func": run_once,
+                "func": _cron_collect,
                 "cron": COLLECT_CRON,
                 "args": [],
             }
