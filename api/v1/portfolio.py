@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
+from api.services.evaluation import EvaluationService
 from api.services.portfolio import PortfolioService
 from schemas.envelope import SOURCE_BATCH, SOURCE_REALTIME, Envelope
 from schemas.portfolio import ImportFromPaperRequest, PortfolioCreateRequest
@@ -108,7 +109,14 @@ def diagnose_portfolio(
     )
     fund_types = {f.code: f.type_ for f in funds}
 
-    report = diagnose(portfolio_id, weights, fund_types=fund_types, risk_type=risk_type)
+    fund_styles = _collect_fund_styles(db, codes)
+    report = diagnose(
+        portfolio_id,
+        weights,
+        fund_types=fund_types,
+        risk_type=risk_type,
+        fund_styles=fund_styles,
+    )
     return Envelope.ok(data=report.to_dict(), source=SOURCE_REALTIME, as_of=date.today())
 
 
@@ -185,8 +193,15 @@ def rebalance_portfolio(
     )
     fund_types = {f.code: f.type_ for f in funds}
 
+    fund_styles = _collect_fund_styles(db, codes)
     # 复用诊断的再平衡逻辑(TP-03 §5)
-    report = diagnose(portfolio_id, weights, fund_types=fund_types, risk_type=risk_type)
+    report = diagnose(
+        portfolio_id,
+        weights,
+        fund_types=fund_types,
+        risk_type=risk_type,
+        fund_styles=fund_styles,
+    )
     return Envelope.ok(
         data={
             "portfolio_id": portfolio_id,
@@ -197,6 +212,21 @@ def rebalance_portfolio(
         source=SOURCE_REALTIME,
         as_of=date.today(),
     )
+
+
+def _collect_fund_styles(db: Session, codes: list[str]) -> dict[str, tuple[str | None, str | None]]:
+    """预算组合成分风格箱(§3.4 风格维用，权益类；非权益类跳过 E13)。
+
+    逐成分调 ``EvaluationService.get_stylebox``；债/货/QDII 返 None 跳过。
+    数据不足时 ``(size, vg)`` 含 None，风格维据此降级。
+    """
+    eval_svc = EvaluationService(db)
+    styles: dict[str, tuple[str | None, str | None]] = {}
+    for code in codes:
+        sb = eval_svc.get_stylebox(code)
+        if sb is not None:  # 权益类(E13)；非权益/不存在跳过
+            styles[code] = (sb.size, sb.value_growth)
+    return styles
 
 
 def _window_start(window: str) -> date:

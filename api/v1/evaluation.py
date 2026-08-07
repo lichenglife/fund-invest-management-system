@@ -77,18 +77,18 @@ def get_stylebox(
     code: str,
     db: Annotated[Session, Depends(get_db)],
 ) -> Envelope[dict[str, Any]]:
-    """风格箱(size, value_growth)；仅权益类(闭合 E13)，债/货/QDII 不显示。"""
+    """风格箱(size, value_growth)；仅权益类(闭合 E13)，债/货/QDII 不显示。
+
+    持仓法(市值+估值成长因子)+收益回归交叉验证(TP-01 §3.5)；
+    个股基本面缺失时按回退链降级，``available=False`` 不硬算。
+    """
     svc = EvaluationService(db)
     result = svc.get_stylebox(code)
     if result is None:
         raise NotFoundError(f"基金不存在或类型不支持风格箱: {code}")
-    size, vg = result
-    data: dict[str, Any] = {
-        "size": size,
-        "value_growth": vg,
-        "available": size is not None and vg is not None,
-        "note": "风格箱算法待实现(P1-03)" if size is None else None,
-    }
+    data: dict[str, Any] = result.to_dict()
+    if not result.available:
+        data["note"] = "风格箱数据不足(持仓基本面缺失)，待个股基本面采集(P1-02)"
     return Envelope.ok(data=data, source=SOURCE_REALTIME, as_of=date.today())
 
 

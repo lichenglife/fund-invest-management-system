@@ -154,12 +154,15 @@ class TestStyleboxEndpoint:
     """GET /api/v1/funds/{code}/stylebox(§3.3.1, E13)。"""
 
     def test_equity_type_returns(self, client_with_fund: TestClient) -> None:
-        """权益类(mixed) -> 返回(算法待实现占位)。"""
+        """权益类(mixed) -> 风格箱算法已实现；fixture 无持仓基本面 -> available=False。"""
         resp = client_with_fund.get("/api/v1/funds/000001/stylebox")
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert "size" in data
         assert "value_growth" in data
+        assert data["available"] is False  # 持仓基本面缺失(P1-02 采集后补)
+        assert data["method"] == "holdings_missing"
+        assert data["reg_window"] == "3y"  # E13 披露
 
     def test_fund_not_found_40002(self, client_with_fund: TestClient) -> None:
         resp = client_with_fund.get("/api/v1/funds/999999/stylebox")

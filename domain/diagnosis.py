@@ -15,6 +15,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from domain.stylebox import VG_GROWTH
+
 logger = logging.getLogger(__name__)
 
 #: 状态枚举。
@@ -99,6 +101,7 @@ def diagnose(
     fund_types: dict[str, str] | None = None,
     risk_type: str = "moderate",
     fund_metrics: dict[str, dict[str, Any]] | None = None,
+    fund_styles: dict[str, tuple[str | None, str | None]] | None = None,
 ) -> DiagnosisReport:
     """组合诊断(§3.6.6.1 / TP-03 §4)。
 
@@ -109,17 +112,20 @@ def diagnose(
         risk_type: 风险偏好(conservative/moderate/aggressive，E8)。
         fund_metrics: {code: {excess, max_drawdown, scale, fee_rate, turnover}}；
             None 时个基维跳过。
+        fund_styles: {code: (size, value_growth)}(风格箱，§3.4 风格维)；
+            None/缺项时风格维回退权益占比近似。
     Returns:
         DiagnosisReport。
     """
     fund_types = fund_types or {}
     fund_metrics = fund_metrics or {}
+    fund_styles = fund_styles or {}
 
     # 五维诊断
     asset = _asset_dim(weights, fund_types, risk_type)
     overseas = _overseas_dim(weights, fund_types)
     industry = _industry_dim(weights)  # MVP：无行业数据 -> green(待 P3 穿透)
-    style = _style_dim(weights, fund_types, risk_type)
+    style = _style_dim(weights, fund_types, risk_type, fund_styles)
     single = _single_fund_dim(weights, fund_metrics)
 
     per_dim = {
@@ -209,9 +215,46 @@ def _industry_dim(weights: dict[str, float]) -> DimResult:
     return DimResult("industry", GREEN, "行业集中度待穿透数据(P3)", metrics={"available": False})
 
 
-def _style_dim(weights: dict[str, float], fund_types: dict[str, str], risk_type: str) -> DimResult:
-    """风格维(§3.4，MVP：简化为权益类占比近似)。"""
-    # TODO(P1-03 风格箱)：用持仓法/收益回归判定风格暴露
+def _style_dim(
+    weights: dict[str, float],
+    fund_types: dict[str, str],
+    risk_type: str,
+    fund_styles: dict[str, tuple[str | None, str | None]] | None = None,
+) -> DimResult:
+    """风格维(§3.4 / TP-03 §3)：风格箱成长暴露判定，缺风格箱回退权益占比近似。
+
+    有风格箱 -> 成长暴露 = Σ(权重 where value_growth=成长)；
+    无风格箱 -> 权益类占比 × 0.5 近似(MVP 占位，标 available=False)。
+    保守偏好下成长暴露超阈值 -> 红(E8 风格错配)。
+    """
+    if fund_styles:
+        growth_exposure = sum(
+            w for c, w in weights.items() if (fund_styles.get(c) or (None, None))[1] == VG_GROWTH
+        )
+        if growth_exposure > THRESHOLDS["style_growth_max"] and risk_type == "conservative":
+            return DimResult(
+                "style",
+                RED,
+                f"成长暴露 {growth_exposure*100:.0f}% 与保守偏好错配",
+                "降低成长风格暴露",
+                metrics={
+                    "growth_exposure": growth_exposure,
+                    "available": True,
+                    "source": "stylebox",
+                },
+            )
+        return DimResult(
+            "style",
+            GREEN,
+            f"成长暴露 {growth_exposure*100:.0f}%(风格箱口径)",
+            metrics={
+                "growth_exposure": growth_exposure,
+                "available": True,
+                "source": "stylebox",
+            },
+        )
+
+    # 回退：权益占比近似(MVP 占位)
     growth_exposure = (
         sum(w for c, w in weights.items() if fund_types.get(c) in EQUITY_TYPES) * 0.5
     )  # 简化近似
@@ -219,11 +262,24 @@ def _style_dim(weights: dict[str, float], fund_types: dict[str, str], risk_type:
         return DimResult(
             "style",
             RED,
-            f"成长暴露 {growth_exposure*100:.0f}% 与保守偏好错配",
+            f"成长暴露 {growth_exposure*100:.0f}% 与保守偏好错配(权益占比近似)",
             "降低成长风格暴露",
-            metrics={"growth_exposure": growth_exposure},
+            metrics={
+                "growth_exposure": growth_exposure,
+                "available": False,
+                "source": "equity_proxy",
+            },
         )
-    return DimResult("style", GREEN, "风格配置待风格箱(P1-03)", metrics={"available": False})
+    return DimResult(
+        "style",
+        GREEN,
+        "风格配置待风格箱数据(权益占比近似)",
+        metrics={
+            "growth_exposure": growth_exposure,
+            "available": False,
+            "source": "equity_proxy",
+        },
+    )
 
 
 def _single_fund_dim(

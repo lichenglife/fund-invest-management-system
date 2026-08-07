@@ -22,6 +22,7 @@ from domain.attribution import Attribution, brinson_attribution
 from domain.metrics import DEFAULT_EVAL_WINDOW, Metrics, compute_metrics
 from domain.research import ERPResult, ProxyResult, erp_proxy, peg_proxy
 from domain.scoring import SCORE_WEIGHTS, Score, recompute_with_weights
+from domain.stylebox import STYLEBOX_SCOPE, StyleBoxResult, style_box
 from infra.db.models import Fund, Holding, Nav
 from infra.db.models.fund import Score as ScoreModel
 
@@ -162,10 +163,13 @@ class EvaluationService:
             )
         # 默认权重 -> 写缓存(§2.8)
         cache_set(
-            "score", code=code,
+            "score",
+            code=code,
             value={
-                "code": base.code, "composite": base.composite,
-                "factors": base.factors, "weights": base.weights,
+                "code": base.code,
+                "composite": base.composite,
+                "factors": base.factors,
+                "weights": base.weights,
                 "as_of": base.as_of,
             },
         )
@@ -173,18 +177,25 @@ class EvaluationService:
 
     # ------------------------------------------------------------------ 风格箱
 
-    def get_stylebox(self, code: str) -> tuple[str | None, str | None] | None:
-        """风格箱(size, value_growth)(§3.3.1 / 闭合 E13)。
+    def get_stylebox(self, code: str) -> StyleBoxResult | None:
+        """风格箱九宫格(size, value_growth)(§3.3.1 / TP-01 §3.5 / 闭合 E13)。
 
-        风格箱限权益类(详设 E13)；债/货/QDII 不显示。
-        > P1-03 阶段 stylebox 算法未实现；返回 None 占位。
+        调 domain.stylebox：持仓法(市值+估值成长因子)+收益回归交叉验证，E13 限权益类。
+        基金不存在或类型不适用(E13)返 None；否则返 StyleBoxResult(数据不足时 available=False)。
         """
         fund = self.get_fund(code)
         if fund is None:
             return None
-        if fund.type_ in ("mixed", "stock", "index", "etf"):
-            return (None, None)  # 占位：算法待实现
-        return None  # 债/货/QDII 不显示(E13)
+        if fund.type_ not in STYLEBOX_SCOPE:
+            return None  # 债/货/QDII/另类不显示(E13)
+        holdings = self.load_holdings(code)
+        as_of = fund.as_of.isoformat() if fund.as_of else None
+        return style_box(
+            fund.type_,
+            holdings,
+            fund_style=fund.style,
+            as_of=as_of,
+        )
 
     # ------------------------------------------------------------------ Brinson 归因(P1-03c)
 
