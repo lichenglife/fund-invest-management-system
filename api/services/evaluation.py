@@ -123,13 +123,17 @@ class EvaluationService:
         if weights is None:
             cached = cache_get("score", code=code)
             if cached is not None:
-                return Score(
-                    code=cached["code"],
-                    composite=cached["composite"],
-                    factors=cached["factors"],
-                    weights=cached["weights"],
-                    as_of=cached["as_of"],
-                )
+                # 缓存 schema 漂移(旧版本残留) -> 视为未命中，走 DB 重算并覆写
+                try:
+                    return Score(
+                        code=cached["code"],
+                        composite=cached["composite"],
+                        factors=cached["factors"],
+                        weights=cached.get("weights") or dict(SCORE_WEIGHTS),
+                        as_of=cached.get("as_of"),
+                    )
+                except (KeyError, TypeError, ValueError):
+                    logger.warning("score.cache_schema_drift code=%s", code)
 
         fund = self.get_fund(code)
         if fund is None:

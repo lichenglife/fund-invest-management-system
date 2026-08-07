@@ -6,6 +6,7 @@ DB 集成：写入基金+净值，调端点验证信封(7字段) + 指标/cv_fla
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -17,10 +18,8 @@ pytestmark = pytest.mark.db
 
 
 @pytest.fixture()
-def client_with_fund(db_session: Session):
+def client_with_fund(db_session: Session) -> Iterator[TestClient]:
     """种子数据 + TestClient(get_db override 指向共享引擎；表已由 conftest db_session truncate)。"""
-    from collections.abc import Iterator
-
     from sqlalchemy.orm import sessionmaker
 
     from api.deps import get_db
@@ -148,6 +147,36 @@ class TestScoreEndpoint:
         resp = client_with_fund.get("/api/v1/funds/999999/score")
         assert resp.status_code == 404
         assert resp.json()["code"] == 40002
+
+    def test_stale_cache_schema_drift_not_50302(self, client_with_fund: TestClient) -> None:
+        """缓存 schema 漂移(旧版本残留缺 weights/as_of) -> 视为未命中走 DB，不 50302。
+
+        回归：旧缓存含 brinson/scope 等历史字段而缺 weights，``cached["weights"]``
+        曾抛 KeyError 被 get_db 吞成 50302；修复后应降级为未命中、走 DB 重算并自愈覆写。
+        """
+        from infra.redis.cache import cache_set
+
+        cache_set(
+            "score",
+            code="000001",
+            value={
+                "code": "000001",
+                "composite": 82.3,
+                "factors": {
+                    "ret": {"sub_score": 88.0, "weight": 20, "raw": 0.10, "contrib": 1760.0},
+                },
+                # 旧 schema 字段(无 weights/as_of)
+                "brinson": None,
+                "scope": "mixed",
+                "universe_tag": "cross_section",
+            },
+        )
+        resp = client_with_fund.get("/api/v1/funds/000001/score")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["code"] == 0  # 非 50302(数据库不可用)
+        assert body["data"]["composite"] is not None
+        assert body["data"]["weights"]["ret"] == 20  # 走 DB 重算，权重默认
 
 
 class TestStyleboxEndpoint:

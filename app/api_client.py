@@ -149,7 +149,10 @@ def list_funds(
     data = _fetch(
         "/api/v1/funds",
         lambda: _mock().FUNDS,
-        q=q, type=fund_type, page=page, page_size=page_size,
+        q=q,
+        type=fund_type,
+        page=page,
+        page_size=page_size,
     )
     if isinstance(data, dict):
         return data.get("items", [])
@@ -217,8 +220,11 @@ def screen_funds(
         try:
             data = get_client().post(
                 "/api/v1/screen",
-                filters=backend_filters, sort=sort_field, order=order,
-                page=1, page_size=100,
+                filters=backend_filters,
+                sort=sort_field,
+                order=order,
+                page=1,
+                page_size=100,
             )
             return data.get("items", []) if isinstance(data, dict) else []
         except Exception as exc:  # noqa: BLE001
@@ -259,7 +265,8 @@ def screen_funds(
 def get_paper_portfolio(account_id: str = "default") -> dict[str, Any]:
     """持仓看板(§3.5.3)：现金/总资产/盈亏/持仓明细。"""
     return _fetch(
-        "/api/v1/paper/portfolio", lambda: _mock().PAPER_ACCOUNT | {"positions": _mock().PAPER_POSITIONS},
+        "/api/v1/paper/portfolio",
+        lambda: _mock().PAPER_ACCOUNT | {"positions": _mock().PAPER_POSITIONS},
         account_id=account_id,
     )
 
@@ -280,17 +287,54 @@ def get_paper_positions() -> list[dict[str, Any]]:
     return []
 
 
-def get_dca_backtest() -> dict[str, Any]:
-    return _fetch("/api/v1/paper/dca-backtest", lambda: _mock().DCA_BACKTEST)
-
-
-def run_dca_backtest(
-    code: str, freq: str = "monthly", amount: float = 1000.0
+def get_dca_backtest(
+    code: str = "110011", freq: str = "monthly", amount: float = 1000.0
 ) -> dict[str, Any]:
+    """历史定投回测默认展示(§3.5.8，POST /paper/dca-backtest)。
+
+    真实模式 POST 默认标的(月定投1000元)并适配为页面契约字段
+    (后端返 ``{cum_invest,final_value,profit,irr,nav_curve}`` -> 页面消费
+    ``{code,freq,amount,period,invested,market_value,return_pct,cost_avg}``)；
+    标的净值不足或失败 -> 回退 Mock(§8.5 降级)。
+    """
+    freq_label = {"weekly": "周定投", "monthly": "月定投", "quarterly": "季定投"}.get(freq, freq)
+    if MOCK_MODE:
+        return _mock().DCA_BACKTEST
+    try:
+        data = get_client().post("/api/v1/paper/dca-backtest", code=code, freq=freq, amount=amount)
+        if not isinstance(data, dict) or data.get("available") is False:
+            return _mock().DCA_BACKTEST
+        invested = float(data.get("cum_invest") or 0.0)
+        final_value = float(data.get("final_value") or 0.0)
+        curve = data.get("nav_curve") or []
+        period = ""
+        if curve:
+            d0 = str(curve[0].get("date", ""))[:7]
+            d1 = str(curve[-1].get("date", ""))[:7]
+            period = f"{d0} ~ {d1}"
+        return_pct = (final_value / invested - 1.0) if invested > 0 else 0.0
+        return {
+            "code": data.get("code") or code,
+            "freq": freq_label,
+            "amount": amount,
+            "period": period,
+            "invested": invested,
+            "market_value": final_value,
+            "return_pct": return_pct,
+            "cost_avg": True,
+        }
+    except ApiError as exc:
+        logger.info("api.fallback_to_mock", extra={"path": "dca-backtest", "err": str(exc)})
+        return _mock().DCA_BACKTEST
+
+
+def run_dca_backtest(code: str, freq: str = "monthly", amount: float = 1000.0) -> dict[str, Any]:
     """定投回测(§3.5.8，POST)。真实返 {cum_invest,final_value,irr,...}。"""
     return get_client().post(
         "/api/v1/paper/dca-backtest",
-        code=code, freq=freq, amount=amount,
+        code=code,
+        freq=freq,
+        amount=amount,
     )
 
 
@@ -331,12 +375,14 @@ def get_portfolio_diagnosis(
     per_dim = data.get("per_dim", {}) if isinstance(data, dict) else {}
     rows: list[dict[str, Any]] = []
     for dim, info in per_dim.items():
-        rows.append({
-            "dim": info.get("dim", dim),
-            "status": info.get("detail", ""),
-            "level": _DIAG_LEVEL.get(info.get("status", ""), "g"),
-            "advice": info.get("advice", ""),
-        })
+        rows.append(
+            {
+                "dim": info.get("dim", dim),
+                "status": info.get("detail", ""),
+                "level": _DIAG_LEVEL.get(info.get("status", ""), "g"),
+                "advice": info.get("advice", ""),
+            }
+        )
     return rows
 
 
@@ -348,16 +394,12 @@ def _first_portfolio_id() -> str | None:
     return None
 
 
-def get_portfolio_backtest(
-    portfolio_id: str | None = None, window: str = "3y"
-) -> dict[str, Any]:
+def get_portfolio_backtest(portfolio_id: str | None = None, window: str = "3y") -> dict[str, Any]:
     """组合回测(§3.6.7，vs 自适应全收益基准 E14)。真实返 {cum_return,nav_curve,...}。"""
     pid = portfolio_id or _first_portfolio_id()
     if not pid:
         return {"available": False, "note": "无组合"}
-    return _fetch(
-        f"/api/v1/portfolios/{pid}/backtest", lambda: {"available": False}, window=window
-    )
+    return _fetch(f"/api/v1/portfolios/{pid}/backtest", lambda: {"available": False}, window=window)
 
 
 def get_portfolio_rebalance(
@@ -418,12 +460,14 @@ def get_lab_scenarios(code: str) -> list[dict[str, Any]]:
         curve = projections.get(key, [])
         final = curve[-1]["value"] if curve else None
         ann = assumptions.get(key)
-        rows.append({
-            "scenario": label,
-            "expected": ann,
-            "final_value": final,
-            "impact": "正收益" if (ann or 0) > 0 else "负收益",
-        })
+        rows.append(
+            {
+                "scenario": label,
+                "expected": ann,
+                "final_value": final,
+                "impact": "正收益" if (ann or 0) > 0 else "负收益",
+            }
+        )
     return rows
 
 
