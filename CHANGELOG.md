@@ -17,6 +17,7 @@
 - `infra/external/llm_client.py` async DeepSeek 客户端 + `domain/nl_eval.py` 评测模块
 
 ### Changed
+- **MVP 优先级调整（2026-08-07）**：优先业务功能、尽快 MVP 落地；非业务项暂时搁置并记录。P1-23 拆为 P1-23a 灰度上线（业务，优先）+ P1-23b 监控/备份（非业务，搁置）。搁置清单见 `DEFERRED.md` §搁置项（S1~S7：监控/备份/CR流程/CI-PG/全量构建验证/后台运维端点）。不搁置：A2 密钥轮换、后台 /admin/jobs+/quality、stylebox 算法、D6 复权（均业务/上线必做）。
 - **E6 红线口径**：稳健/低风险 由 exclude[index,etf] 改为 **TYPE 约束**(type∈[bond,mixed])，化解 §4 与 §12 评测 oracle 冲突（`5ab00c2`）
 - Dockerfile/CI/Makefile 补装 `requirements-extras.txt`（原缺 pandas/akshare/alembic/APScheduler 等运行时依赖，`3f8d2be`）
 - docker-compose.yml 生产化：密钥外部化(env_file+POSTGRES_*派生)、资源限制、migrate 一次性服务、worker 常驻调度、4 服务共享 fundlens-app 镜像（`3f8d2be`）
