@@ -24,23 +24,34 @@ from app.utils import mock_badge, status_badge  # noqa: E402
 
 
 def render_topbar() -> None:
-    """顶部栏：系统名 + 角色切换 + 数据截至(原型§2)。"""
-    cols = st.columns([6, 2, 2])
-    with cols[0]:
-        st.markdown(
-            '<div style="display:flex;align-items:center;gap:10px">'
-            '<span style="font-size:1.6rem">📈</span>'
-            '<span style="font-size:1.3rem;font-weight:800;color:var(--brand-deep)">FundLens</span>'
-            '<span style="color:var(--text-muted);font-size:0.95rem">· 基金学习利器</span>'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    with cols[1]:
-        # key="role" 的 selectbox 自动持久化到 session_state，无需再显式 set
-        st.selectbox("角色", ["学习者", "评估者", "交易者"], key="role")
-    with cols[2]:
-        # 数据截至日期占位(真实值由 P1-12 仪表盘聚合接口提供)
-        st.caption("数据截至 2025-07-20（净值 T+1 / 宏观 T+15）")
+    """顶部栏：绿色品牌条(原型§2) + 角色切换 + 数据截至。
+
+    绿色 bar 全宽 bleed(logo 左 / 数据截至 右)，角色切换用 segmented_control
+    (无则 selectbox)置于栏下，功能保持写入 session_state["role"]。
+    """
+    st.markdown(
+        '<div class="fl-topbar">'
+        '<div class="fl-logo">🟢 FundLens · 基金学习利器</div>'
+        '<div class="fl-asof">数据截至 2025-07-20（净值 T+1 / 宏观 T+15）</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    roles = ["学习者", "评估者", "交易者"]
+    if "role" not in st.session_state:
+        st.session_state.role = "学习者"
+    with st.container():
+        st.markdown('<div class="fl-topbar-role"></div>', unsafe_allow_html=True)
+        if hasattr(st, "segmented_control"):
+            st.segmented_control(
+                "角色切换", roles, default=st.session_state.role, key="role"
+            )
+        else:
+            st.selectbox(
+                "角色切换",
+                roles,
+                index=roles.index(st.session_state.role),
+                key="role",
+            )
 
 
 def render_status() -> None:

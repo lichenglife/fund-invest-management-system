@@ -104,21 +104,17 @@ for tab, (_label, ftype) in zip(tabs, tabs_cfg, strict=False):
 
 # --- 近期动态(FR-D3) ---
 st.markdown("#### 📰 近期动态")
-for line in data["dynamics"]:
-    st.markdown(f"- {line}")
+ui.dyn_list(data["dynamics"])
 
 st.divider()
 
-# --- 学习区(FR-D4/D5 底部：学一基卡 + 学习入口) ---
+# --- 学习区(FR-D4/D5 底部：学一基渐变卡 + 学习入口) ---
 lc, le = st.columns([3, 2])
 with lc:
-    with st.container(border=True):
-        st.markdown("##### 📘 学一基 · 今日（FR-D4）")
-        st.markdown(f"**「{data['learn_card']['title']}」**")
-        st.write(data["learn_card"]["desc"])
-        c1, c2 = st.columns(2)
-        c1.page_link("pages/02_基金数据中心.py", label="🗂️ 看档案", icon="➡️")
-        c2.page_link("pages/10_学习投教.py", label="📚 指标词典", icon="➡️")
+    ui.learn_card(f"「{data['learn_card']['title']}」", data["learn_card"]["desc"])
+    c1, c2 = st.columns(2)
+    c1.page_link("pages/02_基金数据中心.py", label="🗂️ 看档案", icon="➡️")
+    c2.page_link("pages/10_学习投教.py", label="📚 指标词典", icon="➡️")
 with le:
     with st.container(border=True):
         st.markdown("##### 学习入口")

@@ -27,17 +27,14 @@ LEVEL_LABEL = {
 
 def metric_card(label: str, value: str, color: str | None = None) -> None:
     """指标卡(原型 .card；k/v 结构，带颜色)。色值对齐 static/style.css 令牌。"""
-    if color:
-        st.markdown(
-            f'<div style="border:1px solid var(--card-border);border-radius:12px;padding:12px;'
-            f'box-shadow:0 1px 3px rgba(0,0,0,0.08)">'
-            f'<div style="color:var(--text-muted);font-size:12px">{label}</div>'
-            f'<div style="font-size:22px;font-weight:700;margin-top:4px;color:{color}">{value}</div>'
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.metric(label, value)
+    vstyle = f' style="color:{color}"' if color else ""
+    st.markdown(
+        f'<div class="fl-card">'
+        f'<div class="k">{label}</div>'
+        f'<div class="v"{vstyle}>{value}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def metric_row(cards: list[dict[str, Any]]) -> None:
@@ -244,6 +241,116 @@ def df_with_style(df: Any, use_container_width: bool = True) -> None:
     st.dataframe(df, use_container_width=use_container_width, hide_index=True)
 
 
+# ---------------------------------------------------------------------------
+# 原型组件词汇封装(对应 fund_invest_prototype.html)
+# 仅输出 class 化 HTML，色值全部走令牌，无内联硬色码(满足 test_no_inline_hex)。
+# ---------------------------------------------------------------------------
+
+def learn_card(title: str, desc: str) -> None:
+    """学一基渐变卡(原型 .learn-card)：浅薄荷->浅灰渐变，呼应首页学习线索。"""
+    st.markdown(
+        f'<div class="fl-card fl-learn-card">'
+        f'<div style="font-size:14px;color:var(--text-body)"><b>{title}</b><br>{desc}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def factor_bars(factors: list[dict[str, Any]]) -> None:
+    """五因子分解条(原型 .factors/.factor)：标签 + 品牌绿进度条 + 贡献值。"""
+    items = "".join(
+        f'<div class="fl-factor">'
+        f'<div class="fl-fl"><span>{f["name"]}</span>'
+        f'<span>{f["raw"]} · 贡献 {f["contrib"]}</span></div>'
+        f'<div class="fl-bar"><i style="width:{max(0, min(100, f["sub_score"]))}%"></i></div>'
+        f"</div>"
+        for f in factors
+    )
+    st.markdown(f'<div class="fl-factors">{items}</div>', unsafe_allow_html=True)
+
+
+def rcard_grid(items: list[dict[str, Any]], min_col_width: int = 150) -> None:
+    """着色卡片网格(原型 .rcard good/warn/bad)。items: [{name, value, desc, level}]。"""
+    if not items:
+        return
+    cell = "".join(
+        f'<div class="fl-rcard {it.get("level", "good")}">'
+        f'<div class="n">{it.get("name", "")}</div>'
+        f'<div class="v">{it.get("value", "-")}</div>'
+        f'<div class="d">{it.get("desc", "")}</div></div>'
+        for it in items
+    )
+    st.markdown(
+        f'<div class="fl-grid" style="--fl-min:{min_col_width}px">{cell}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def dedup_note(text: str) -> None:
+    """相似去重提示(原型 .dedup)。"""
+    st.markdown(f'<div class="fl-dedup">⚠ {text}</div>', unsafe_allow_html=True)
+
+
+def nlparsed_note(cond: str, conf: float | None = None) -> None:
+    """自然语言解析回显(原型 .nlparsed)。"""
+    conf_html = f" · 置信度 {conf * 100:.0f}%" if conf is not None else ""
+    st.markdown(
+        f'<div class="fl-nlparsed">✅ 已解析为条件：{cond}'
+        f'<br><span style="color:var(--text-muted)">'
+        f"歧义时反问澄清 · 解析失败回退规则{conf_html}</span></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def pos_suggestion(big: str, sub: str | None = None) -> None:
+    """持仓/仓位建议框(原型 .pos-sug)。"""
+    sub_html = (
+        f'<div style="font-size:12px;color:var(--text-muted);margin-top:4px">{sub}</div>'
+        if sub
+        else ""
+    )
+    st.markdown(
+        f'<div class="fl-pos-sug"><div class="big">{big}</div>{sub_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def redflag(text: str) -> None:
+    """回本红条(原型 .redflag)。"""
+    st.markdown(f'<div class="fl-redflag">🔴 {text}</div>', unsafe_allow_html=True)
+
+
+def surround_box(text: str) -> None:
+    """外围传导框(原型 .surround)。"""
+    st.markdown(f'<div class="fl-surround">{text}</div>', unsafe_allow_html=True)
+
+
+def reject_note(text: str) -> None:
+    """拒答降级框(原型 .reject)。"""
+    st.markdown(f'<div class="fl-reject">⚠ {text}</div>', unsafe_allow_html=True)
+
+
+def pill(level: str, text: str) -> str:
+    """状态药丸(原型 .pill ok/warn/bad)，返回内联 markdown 字符串。"""
+    return f'<span class="fl-pill {level}">{text}</span>'
+
+
+def badge_new() -> str:
+    """NEW 角标(原型 .badge-new)。"""
+    return '<span class="fl-badge-new">NEW</span>'
+
+
+def dyn_list(lines: list[str]) -> None:
+    """动态列表(原型 .dyn)。"""
+    items = "".join(f"<div>{ln}</div>" for ln in lines)
+    st.markdown(f'<div class="fl-dyn">{items}</div>', unsafe_allow_html=True)
+
+
+def tip(text: str) -> str:
+    """提示圆点(原型 .tip)，hover 显示说明。"""
+    return f'<span class="fl-tip" title="{text}">?</span>'
+
+
 __all__ = [
     "LEVEL_LABEL",
     "metric_card",
@@ -262,4 +369,17 @@ __all__ = [
     "inject_responsive_bridge",
     "kpi_grid",
     "page_header",
+    "learn_card",
+    "factor_bars",
+    "rcard_grid",
+    "dedup_note",
+    "nlparsed_note",
+    "pos_suggestion",
+    "redflag",
+    "surround_box",
+    "reject_note",
+    "pill",
+    "badge_new",
+    "dyn_list",
+    "tip",
 ]

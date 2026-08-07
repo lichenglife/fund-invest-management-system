@@ -119,19 +119,16 @@ brinson_chart.render(api_client.get_attribution(code), fund_type=fund["type"])
 # --- 研究型指标(FR-45，分组卡片+阈值着色+一句话解读；PEG/ERP 走守卫) ---
 res = api_client.get_research(code)
 with ui.panel("研究型指标", tag="FR-45 · 分组卡片 + 阈值着色 · TP-01 §3.7"):
-    items = res.get("items", [])
-    cols = st.columns(3) if items else st.columns(1)
-    for col, it in zip(cols, items, strict=False):
-        with col:
-            color = utils.level_color(it["level"])
-            st.markdown(
-                f'<div style="border:1px solid {color};border-radius:8px;padding:10px 12px;'
-                f'background:{"var(--brand-bg)" if it["level"]=="good" else "var(--warn-bg)" if it["level"]=="warn" else "var(--danger-bg)"}">'
-                f'<div style="font-size:12px;color:var(--text-muted)">{it["name"]}</div>'
-                f'<div style="font-size:18px;font-weight:700;color:{color}">{it["value"]:g}</div>'
-                f'<div style="font-size:11px">{it["desc"]}</div></div>',
-                unsafe_allow_html=True,
-            )
+    items = [
+        {
+            "name": it["name"],
+            "value": f"{it['value']:g}",
+            "desc": it["desc"],
+            "level": it["level"] if it["level"] in ("good", "warn", "bad") else "good",
+        }
+        for it in res.get("items", [])
+    ]
+    ui.rcard_grid(items)
     ui.source_footer(
         extra="交叉验证误差 <0.5%（>0.5% 标红存疑）；未定义口径过 RESEARCH_PROXY_GUARD(40301)"
     )

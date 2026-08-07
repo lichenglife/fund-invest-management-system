@@ -25,12 +25,15 @@ def _factor_bar(name: str, sub_score: float, weight: float, raw: float, contrib:
     meta = store.FACTOR_META.get(name, {"name": name, "desc": ""})
     label = f"{meta['name']} {int(weight * 100)}%"
     raw_str = utils.format_pct(raw) if name in ("ret", "risk") else f"{raw:g}"
+    pct = max(0, min(100, int(sub_score)))
     st.markdown(
-        f'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)"'>
-        f"<span>{label}</span><span>{raw_str} · 贡献 {contrib:g}</span></div>",
+        f'<div class="fl-factor">'
+        f'<div class="fl-fl"><span>{label}</span>'
+        f'<span>{raw_str} · 贡献 {contrib:g}</span></div>'
+        f'<div class="fl-bar"><i style="width:{pct}%"></i></div>'
+        f"</div>",
         unsafe_allow_html=True,
     )
-    st.progress(min(max(sub_score / 100, 0.0), 1.0))
 
 
 def render(score: dict[str, Any], allow_tune: bool = True) -> float:

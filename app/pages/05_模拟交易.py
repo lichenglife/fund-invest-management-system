@@ -206,9 +206,8 @@ with pos_c:
             for p in positions:
                 if p["return_pct"] < -0.10:
                     need = utils.breakeven_need(p["return_pct"])
-                    st.error(
-                        f"🔴 {p['code']} 亏损 {p['return_pct']*100:.1f}% -> 回本需涨 +{need*100:.1f}% "
-                        f"👉 "
+                    ui.redflag(
+                        f"{p['code']} 亏损 {p['return_pct']*100:.1f}% -> 回本需涨 +{need*100:.1f}% 👉 "
                     )
                     st.page_link("pages/08_单基深度实验室.py", label="前往单基实验室测算", icon="➡️")
                     break

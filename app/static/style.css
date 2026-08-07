@@ -11,10 +11,10 @@
 
 :root {
   /* --- 品牌标识色(仅用于品牌 / 导航 / 选中态 / 主按钮，不表示涨跌) --- */
-  --brand-deep: #0A6B4A;          /* 墨绿：品牌主色、active 底 */
-  --brand: #16A34A;              /* 翠绿：品牌标识、选中态高亮 */
-  --brand-bg: #F0FDF4;           /* 浅绿背景：选中态柔光底、卡片点缀 */
-  --brand-border: var(--brand-border);       /* 品牌浅绿边框(如·截至 badge) */
+  --brand-deep: #0b7d5c;         /* 墨绿：品牌主色、active 文字（原型 green-d #0b7d5c） */
+  --brand: #0f9d76;              /* 翠绿：品牌标识/导航/主按钮（原型 green #0f9d76，不表涨跌） */
+  --brand-bg: #eaf5f0;           /* 浅薄荷：选中态柔光底/学一基渐变（原型 #eaf5f0） */
+  --brand-border: #bbf7d0;       /* 品牌浅绿边框(如·截至 badge / 学一基卡) */
 
   /* --- 涨跌语义色(全局唯一：红涨绿跌 / A股惯例，对齐原型§5) --- */
   --color-gain: #E23B3B;         /* 红：上涨 / 正收益 */
@@ -25,7 +25,7 @@
   /* --- 功能色(状态/提示，与涨跌语义区分) --- */
   --warn-bg: #FEF9C3;            /* 浅黄：提示/中性 */
   --warn-fg: #B45309;            /* 警告文字(琥珀) */
-  --warn-border: var(--warn-border);        /* 警告边框(琥珀) */
+  --warn-border: #fde68a;        /* 警告边框(琥珀) */
   --info-bg: #DBEAFE;            /* 浅蓝：信息提示 */
   --info-fg: #1D4ED8;            /* 信息文字 */
   --danger: #E23B3B;             /* 红：风险数值(与涨同色，语义不同) */
@@ -65,6 +65,9 @@
 
   /* --- 断点(参考；Streamlit 容器宽度驱动响应式) --- */
   --bp-sm: 640px;  --bp-md: 900px;  --bp-lg: 1200px;
+
+  /* --- 容器水平内边距：顶栏全宽 bleed 与响应式复用 --- */
+  --app-px: 1.4rem;
 }
 
 /* =====================================================================
@@ -81,8 +84,8 @@
 .block-container {
   max-width: 100% !important;
   padding-top: 2rem !important;
-  padding-left: 1.4rem !important;
-  padding-right: 1.4rem !important;
+  padding-left: var(--app-px) !important;
+  padding-right: var(--app-px) !important;
 }
 [data-testid="stSidebarCollapsedControl"] {
   margin-left: 0 !important;
@@ -156,17 +159,17 @@ body,
   color: var(--text-body) !important;
 }
 
-/* 当前激活页(active)：品牌墨绿底 + 白字 + 左侧色条，禁止红色 */
+/* 当前激活页(active)：原型浅薄荷底 + 深绿字 + 左侧品牌色条(非实心填充) */
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"],
 [data-testid="stSidebar"] .stPageLink-NavLink-active,
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] button[aria-pressed="true"] {
-  background: var(--brand-deep) !important;
-  color: #ffffff !important;
+  background: var(--brand-bg) !important;
+  color: var(--brand-deep) !important;
   border-left: 3px solid var(--brand);
 }
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"] button,
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] button[aria-pressed="true"] span {
-  color: #ffffff !important;
+  color: var(--brand-deep) !important;
 }
 
 [data-testid="stSidebar"] section[data-testid="stSidebarNav"] {
@@ -396,18 +399,197 @@ body,
 }
 
 /* =====================================================================
+ * 顶部品牌栏(原型§2 绿色 bar：logo + 角色切换 + 数据截至)
+ * 全宽 bleed(负边距拉到容器边缘)，右侧圆角，呼应原型翠绿专业风。
+ * ===================================================================== */
+.fl-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 calc(-1 * var(--app-px)) 0.7rem;
+  padding: 12px var(--app-px);
+  background: var(--brand);
+  color: #ffffff;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+}
+.fl-topbar .fl-logo { font-size: 1.15rem; font-weight: 700; letter-spacing: .3px; }
+.fl-topbar .fl-asof { font-size: 0.78rem; opacity: 0.92; }
+/* 角色切换置于栏下，薄底边呼应顶栏 */
+.fl-topbar-role { margin: -0.2rem 0 0.6rem; }
+
+/* =====================================================================
+ * 原型组件词汇(对应 fund_invest_prototype.html 的 .card/.learn-card/
+ * .factors/.rcard/.dedup/.nlparsed/.pos-sug/.redflag/.pill/.badge-new 等)
+ * 全部走 CSS 变量(令牌 v2 单一源)，不内联硬色码。
+ * ===================================================================== */
+
+/* 通用卡(原型 .card)：白底 + 1px 边 + 圆角 8px + 轻阴影 */
+.fl-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.fl-card .k { color: var(--text-muted); font-size: 12px; }
+.fl-card .v { font-size: 22px; font-weight: 700; margin-top: 4px; line-height: 1.2; }
+.fl-card .v.green { color: var(--brand); }
+.fl-card .v.blue  { color: var(--info-fg); }
+.fl-card .v.red   { color: var(--color-gain); }
+.fl-card .v.gray  { color: var(--text-muted); }
+
+/* KPI 卡圆角对齐原型(8px) */
+.fl-kpi-card { border-radius: var(--radius-sm); }
+
+/* 学一基渐变卡(原型 .learn-card) */
+.fl-learn-card {
+  background: linear-gradient(135deg, #eaf5f0, #f5f7fa);
+  border: 1px solid var(--brand-border);
+}
+
+/* 因子分解条(原型 .factors/.factor) */
+.fl-factors {
+  background: var(--surface-2);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.fl-factor { margin: 8px 0; }
+.fl-factor .fl-fl {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-muted);
+}
+.fl-factor .fl-bar {
+  height: 8px; background: var(--neutral-bg);
+  border-radius: 5px; overflow: hidden; margin-top: 4px;
+}
+.fl-factor .fl-bar > i { display: block; height: 100%; background: var(--brand); }
+
+/* 着色卡片 good/warn/bad(原型 .rcard) */
+.fl-rcard { border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 10px 12px; }
+.fl-rcard .n { font-size: 12px; color: var(--text-muted); }
+.fl-rcard .v { font-size: 18px; font-weight: 700; margin: 2px 0; }
+.fl-rcard .d { font-size: 11px; color: var(--text-muted); }
+.fl-rcard.good { border-color: var(--brand-deep); background: var(--brand-bg); }
+.fl-rcard.warn { border-color: var(--warn-fg);    background: var(--warn-bg); }
+.fl-rcard.bad  { border-color: var(--danger);     background: var(--danger-bg); }
+.fl-rcard.good .v { color: var(--brand-deep); }
+.fl-rcard.warn .v { color: var(--warn-fg); }
+.fl-rcard.bad  .v { color: var(--danger); }
+
+/* 相似去重提示(原型 .dedup) */
+.fl-dedup {
+  background: var(--warn-bg); border: 1px solid var(--warn-border);
+  border-radius: var(--radius-sm); padding: 8px 10px;
+  font-size: 12px; color: var(--warn-fg); margin: 10px 0;
+}
+
+/* 自然语言解析框(原型 .nlparsed) */
+.fl-nlparsed {
+  background: var(--brand-bg); border: 1px dashed var(--brand);
+  border-radius: var(--radius-sm); padding: 8px 10px;
+  font-size: 12px; margin: 10px 0;
+}
+
+/* 持仓/仓位建议框(原型 .pos-sug) */
+.fl-pos-sug {
+  background: var(--brand-bg); border: 1px solid var(--brand);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.fl-pos-sug .big { font-size: 16px; font-weight: 700; color: var(--brand-deep); }
+
+/* 回本红条(原型 .redflag) */
+.fl-redflag { color: var(--danger); font-size: 13px; font-weight: 600; margin-top: 8px; }
+
+/* 外围传导框(原型 .surround) */
+.fl-surround {
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 13px;
+}
+
+/* 拒答降级(原型 .reject) */
+.fl-reject {
+  background: var(--danger-bg); border: 1px solid #eab7b7;
+  border-radius: var(--radius-sm); padding: 8px 10px;
+  font-size: 12px; color: #a53030;
+}
+
+/* 状态 pill(原型 .pill ok/warn/bad) */
+.fl-pill {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.fl-pill.warn { background: var(--warn-bg); color: var(--warn-fg); }
+.fl-pill.bad  { background: var(--danger-bg); color: var(--danger); }
+.fl-pill.ok   { background: var(--brand-bg); color: var(--brand-deep); }
+
+/* NEW 角标(原型 .badge-new) */
+.fl-badge-new {
+  background: var(--info-fg); color: #fff;
+  font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px;
+}
+
+/* 快捷 chip(原型 .quick) */
+.fl-quick { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.fl-quick > span {
+  background: var(--neutral-bg); padding: 5px 10px;
+  border-radius: 14px; font-size: 12px; cursor: pointer;
+}
+
+/* 动态列表(原型 .dyn) */
+.fl-dyn > div {
+  font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--card-border);
+}
+.fl-dyn > div:last-child { border-bottom: none; }
+
+/* 分类树(原型 .tree) */
+.fl-tree > div { font-size: 13px; padding: 4px 0; color: var(--text-body); }
+
+/* 提示圆点(原型 .tip) */
+.fl-tip {
+  display: inline-block; width: 14px; height: 14px; line-height: 14px;
+  text-align: center; border-radius: 50%; background: var(--neutral-bg);
+  color: var(--text-muted); font-size: 10px; cursor: help; margin-left: 3px;
+}
+.fl-tip:hover { background: var(--brand); color: #fff; }
+
+/* 评分星(原型 .star) */
+.fl-star { color: var(--brand); font-weight: 700; }
+
+/* 来源(原型 .source) */
+.fl-source {
+  font-size: 11px; color: var(--text-muted); margin-top: 8px;
+  border-top: 1px dashed var(--card-border); padding-top: 6px;
+}
+
+/* AI 对话(原型 .chat/.msg) */
+.fl-chat {
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  height: 280px; padding: 12px; overflow-y: auto; background: var(--surface-2);
+}
+.fl-msg {
+  margin-bottom: 10px; padding: 8px 12px; border-radius: 8px;
+  max-width: 80%; font-size: 13px;
+}
+.fl-msg.u { background: var(--info-fg); color: #fff; margin-left: auto; }
+.fl-msg.a { background: #fff; border: 1px solid var(--card-border); }
+
+/* =====================================================================
  * 响应式 / 移动优先(令牌 v2 · CR-20260806-01)
  * Streamlit 容器宽度驱动；以下断点用于微调字号/间距/栅格密度。
  * ===================================================================== */
 @media (max-width: 900px) {
+  :root { --app-px: 0.8rem; }
   .fl-kpi-card { padding: 12px 14px; }
   .fl-kpi-card .fl-kpi-value { font-size: 1.5rem; }
   .fl-page-header .fl-title { font-size: 1.5rem; }
   h1 { font-size: 1.6rem !important; }
   h2 { font-size: 1.3rem !important; }
-  .block-container { padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
 }
 @media (max-width: 640px) {
+  :root { --app-px: 0.6rem; }
   .fl-kpi-card .fl-kpi-value { font-size: 1.3rem; }
   .fl-page-header .fl-title { font-size: 1.3rem; }
   .fl-section-title { font-size: 1rem; }

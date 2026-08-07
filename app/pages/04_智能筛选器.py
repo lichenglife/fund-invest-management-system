@@ -59,13 +59,7 @@ with left:
             }
         if st.session_state.get("nl_parsed"):
             p = st.session_state["nl_parsed"]
-            st.markdown(
-                f'<div style="background:var(--brand-bg);border:1px dashed var(--brand);border-radius:6px;'
-                f'padding:8px 10px;font-size:12px">✅ 已解析为条件：{p["cond"]}<br>'
-                f'<span style="color:var(--text-muted)">置信度 {p["conf"]*100:.0f}% · 歧义时反问澄清 · '
-                f"解析失败回退规则</span></div>",
-                unsafe_allow_html=True,
-            )
+            ui.nlparsed_note(p["cond"], p["conf"])
         st.caption("LLM 仅做语义->条件映射，准确率 ≥85%(100 条评测)，不编造数字")
 
 # --- 右：结果 + 排序 + 去重(BR-3.3/3.4) ---
@@ -94,11 +88,8 @@ with right:
             st.dataframe(pd.DataFrame(rrows), use_container_width=True, hide_index=True)
             # 相似去重提示(BR-3.4，重叠≥70%)
             if len(rrows) >= 2:
-                st.markdown(
-                    '<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:6px;'
-                    'padding:8px 10px;font-size:12px;color:var(--warn-fg)">⚠ 检测到结果持仓高度雷同'
-                    "(前十大重叠 ≥70%)：110011 与 005827 可一键去重(默认开启)</div>",
-                    unsafe_allow_html=True,
+                ui.dedup_note(
+                    "检测到结果持仓高度雷同(前十大重叠 ≥70%)：110011 与 005827 可一键去重(默认开启)"
                 )
                 st.button("一键去重", key="dedup_btn")
         else:

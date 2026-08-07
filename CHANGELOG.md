@@ -61,6 +61,8 @@
 - **CR-20260806-01 实现(#9 响应式移动优先与可访问性逐页落地)**：新增视口桥 `ui.inject_responsive_bridge()`（将 `<html data-fl-view>` 置为 sm/md/lg，纯 CSS 响应式，免 Python 感知屏宽）；新增 `ui.kpi_grid()` 响应式网格（auto-fit，替代 `st.columns(N)`+`kpi_card` 循环，宽屏多列/平板 2 列/手机单列）；`style.css` 新增 `.fl-grid` + `[data-fl-view="sm"]` 手机端将全部 `st.columns` 堆叠为单列 + `#main-content` 焦点清理；`page_header` 每页注入「跳到主内容」跳转链接与 `#main-content` 无障碍地标（AA 焦点环/减弱动效/屏幕阅读器专用已就绪）；01 仪表盘、13 后台管理 KPI 行改 `kpi_grid`；`kpi_card` 抽离 `kpi_card_html` 供网格拼接；`tests/test_frontend_tokens.py` 扩至 10 项（a11y 跳转链接/焦点环、响应式网格/视口桥断言）全绿。其余页面列布局由全局 `sm` 堆叠规则统一覆盖移动端。
 - **CR-20260806-01 关闭（2026-08-07）**：实现范围（令牌 v2 / 配色收敛 #8 / 响应式+a11y #9）已交付并合入 `feature/cr-20260806-01-frontend-overhaul`（commit `7dee044`）；CR 状态置 **Closed**。部署交付口径 + 前后端联调依《需求变更管理规范》§7 部分落地登记 **DEFERRED D11** 跟踪，不静默丢弃；CI 门禁依用户决策不纳入本 CR（前端令牌一致性测试 `tests/test_frontend_tokens.py` 10/10 已随提交合入）。
 
+- **CR-20260806-01 实现(原型对齐 #12 · 按原型图改造优化)**：参照 `fund_invest_prototype.html` 与《前端原型》设计系统，整体对齐原型观感——① 品牌绿改为原型 `#0f9d76`（brand）/ `#0b7d5c`（brand-deep），**解除与 `--color-loss` 绿 `#16A34A` 的撞色**（原型要求品牌绿禁用于涨跌，避免语义混淆）；修复两处 `--brand-border`/`--warn-border` 自引用无效变量。② 新增原型绿色顶栏 `.fl-topbar`（logo+数据截至，全宽 bleed）+ 角色切换 `segmented_control`（无则 selectbox），替代原 inline logo+selectbox。③ 侧栏当前页改原型浅薄荷底+深绿字+左色条（非实心填充）。④ 新增原型组件词汇并封装 `ui.py`：`learn_card` 渐变学一基卡、`factor_bars` 品牌绿因子条、`rcard_grid` good/warn/bad 着色卡、`dedup_note`/`nlparsed_note`/`redflag`/`pos_suggestion`/`surround_box`/`reject_note`/`pill`/`badge_new`/`dyn_list`/`tip`；`metric_card` 改 `.fl-card`。⑤ 套用至旗舰页：01 学一基渐变卡+动态列表、03 五因子条+研究指标 rcards、04 NL 解析框+去重提示、05 回本红条。`py_compile` 全绿、`test_no_inline_hex_outside_utils` 确认无新增游离色。
+
 ### Fixed
 - review 修复 /score 恒 None + attribution 误导 0 + 闰年崩溃（`4cfe299`）
 - upsert_funds 分批（PG 参数上限 65535，`5937f35`）
