@@ -232,7 +232,8 @@ def page_header(title: str, subtitle: str = "") -> None:
     sub_html = f'<div class="fl-sub">{subtitle}</div>' if subtitle else ""
     st.markdown(
         '<a class="fl-skip-link" href="#main-content">跳到主内容</a>'
-        '<div id="main-content" tabindex="-1" role="main"></div>'
+        '<div id="main-content" tabindex="-1" role="main" '
+        'style="height:0;margin:0;padding:0;overflow:hidden"></div>'
         f'<div class="fl-page-header"><div class="fl-title">{title}</div>{sub_html}</div>',
         unsafe_allow_html=True,
     )
