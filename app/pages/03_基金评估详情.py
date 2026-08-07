@@ -126,8 +126,8 @@ with ui.panel("研究型指标", tag="FR-45 · 分组卡片 + 阈值着色 · TP
             color = utils.level_color(it["level"])
             st.markdown(
                 f'<div style="border:1px solid {color};border-radius:8px;padding:10px 12px;'
-                f'background:{"#eef9f3" if it["level"]=="good" else "#fff8ec" if it["level"]=="warn" else "#fdeeee"}">'
-                f'<div style="font-size:12px;color:#6B7280">{it["name"]}</div>'
+                f'background:{"var(--brand-bg)" if it["level"]=="good" else "var(--warn-bg)" if it["level"]=="warn" else "var(--danger-bg)"}">'
+                f'<div style="font-size:12px;color:var(--text-muted)">{it["name"]}</div>'
                 f'<div style="font-size:18px;font-weight:700;color:{color}">{it["value"]:g}</div>'
                 f'<div style="font-size:11px">{it["desc"]}</div></div>',
                 unsafe_allow_html=True,

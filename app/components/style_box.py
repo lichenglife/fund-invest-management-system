@@ -51,15 +51,15 @@ def render(current: str = "中盘成长", cv_ok: bool = True, manager: bool = Fa
                 is_cur = _matches_current(row, name, current)
                 if is_cur:
                     c.markdown(
-                        f'<div style="background:#F0FDF4;border:2px solid #16A34A;'
+                        f'<div style="background:var(--brand-bg);border:2px solid var(--brand);'
                         f"border-radius:6px;padding:8px;text-align:center;font-weight:700;"
-                        f'color:#0A6B4A">{row}{name}</div>',
+                        f'color:var(--brand-deep)">{row}{name}</div>',
                         unsafe_allow_html=True,
                     )
                 else:
                     c.markdown(
-                        '<div style="background:#F9FAFB;border:1px solid #E5E7EB;'
-                        'border-radius:6px;padding:8px;text-align:center;color:#6B7280">'
+                        '<div style="background:var(--surface-2);border:1px solid var(--card-border);'
+                        'border-radius:6px;padding:8px;text-align:center;color:var(--text-muted)">'
                         "—</div>",
                         unsafe_allow_html=True,
                     )

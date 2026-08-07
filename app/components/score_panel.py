@@ -26,7 +26,7 @@ def _factor_bar(name: str, sub_score: float, weight: float, raw: float, contrib:
     label = f"{meta['name']} {int(weight * 100)}%"
     raw_str = utils.format_pct(raw) if name in ("ret", "risk") else f"{raw:g}"
     st.markdown(
-        f'<div style="display:flex;justify-content:space-between;font-size:12px;color:#6B7280">'
+        f'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)"'>
         f"<span>{label}</span><span>{raw_str} · 贡献 {contrib:g}</span></div>",
         unsafe_allow_html=True,
     )
@@ -45,9 +45,17 @@ def render(score: dict[str, Any], allow_tune: bool = True) -> float:
 
     with panel("多因子综合评分", tag="引擎唯一权威源 FR-07 · ADR-002"):
         composite = utils.weighted_composite(factors, weights)
+        # 复合分=分数语义(等级)，不表示涨跌；映射状态色，与红涨绿跌绝缘。
+        score_level = (
+            "good" if composite >= 80
+            else "ok" if composite >= 60
+            else "warn" if composite >= 40
+            else "bad"
+        )
+        score_color = utils.LEVEL_COLOR.get(score_level)
         st.markdown(
-            f'<div style="font-size:34px;font-weight:800;color:{utils.COLOR_GREEN}">'
-            f'{composite:g}<span style="font-size:14px;color:#6B7280">/100</span></div>',
+            f'<div style="font-size:34px;font-weight:800;color:{score_color}">'
+            f'{composite:g}<span style="font-size:14px;color:var(--text-muted)">/100</span></div>',
             unsafe_allow_html=True,
         )
         for name in ("ret", "risk", "perf", "scale", "manager"):

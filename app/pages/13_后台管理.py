@@ -67,21 +67,24 @@ with tab_jobs:
     success_rate = kpi.get("success_rate", 0)
     avg_ms = kpi.get("avg_duration_ms", 0)
     with ui.panel("今日执行概览", tag="§3.14.3 / §2.16 定时任务"):
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            kpi_card("今日执行", str(kpi.get("today_runs", 0)), period="近 24h")
-        with c2:
-            kpi_card(
-                "成功率",
-                f"{success_rate * 100:.1f}%",
-                period="近 24h",
-                delta=None,
-                is_positive=success_rate >= 0.95,
-            )
-        with c3:
-            kpi_card("平均耗时", f"{avg_ms / 1000:.1f}s", period="近 24h")
-        with c4:
-            kpi_card("失败数", str(kpi.get("failed", 0)), period="近 24h", is_positive=kpi.get("failed", 0) == 0)
+        ui.kpi_grid(
+            [
+                {"label": "今日执行", "value": str(kpi.get("today_runs", 0)), "period": "近 24h"},
+                {
+                    "label": "成功率",
+                    "value": f"{success_rate * 100:.1f}%",
+                    "period": "近 24h",
+                    "is_positive": success_rate >= 0.95,
+                },
+                {"label": "平均耗时", "value": f"{avg_ms / 1000:.1f}s", "period": "近 24h"},
+                {
+                    "label": "失败数",
+                    "value": str(kpi.get("failed", 0)),
+                    "period": "近 24h",
+                    "is_positive": kpi.get("failed", 0) == 0,
+                },
+            ]
+        )
 
     with ui.panel("任务执行历史", tag="§3.14.3 scheduler_jobs · 每行=一次执行"):
         if jobs:
@@ -172,7 +175,7 @@ with tab_monitor:
             lv = q.get("level", "good")
             st.markdown(
                 f"{utils.level_emoji(lv)} **{q.get('k')}**：{q.get('v')} "
-                f"<small style='color:#6B7280'>· {q.get('d', '')}</small>",
+                f"<small style='color:var(--text-muted)'>· {q.get('d', '')}</small>",
                 unsafe_allow_html=True,
             )
         st.divider()
@@ -230,7 +233,7 @@ with tab_change:
         if need:
             st.markdown(
                 f"**建议发起类型**：{type_label.get(rtype, rtype)}"
-                f"<small style='color:#6B7280'>（严重度 {sev}）</small>",
+                f"<small style='color:var(--text-muted)'>（严重度 {sev}）</small>",
                 unsafe_allow_html=True,
             )
         else:

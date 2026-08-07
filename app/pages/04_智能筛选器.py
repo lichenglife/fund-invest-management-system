@@ -60,9 +60,9 @@ with left:
         if st.session_state.get("nl_parsed"):
             p = st.session_state["nl_parsed"]
             st.markdown(
-                f'<div style="background:#F0FDF4;border:1px dashed #16A34A;border-radius:6px;'
+                f'<div style="background:var(--brand-bg);border:1px dashed var(--brand);border-radius:6px;'
                 f'padding:8px 10px;font-size:12px">✅ 已解析为条件：{p["cond"]}<br>'
-                f'<span style="color:#6B7280">置信度 {p["conf"]*100:.0f}% · 歧义时反问澄清 · '
+                f'<span style="color:var(--text-muted)">置信度 {p["conf"]*100:.0f}% · 歧义时反问澄清 · '
                 f"解析失败回退规则</span></div>",
                 unsafe_allow_html=True,
             )
@@ -95,8 +95,8 @@ with right:
             # 相似去重提示(BR-3.4，重叠≥70%)
             if len(rrows) >= 2:
                 st.markdown(
-                    '<div style="background:#fff8ec;border:1px solid #f0d39a;border-radius:6px;'
-                    'padding:8px 10px;font-size:12px;color:#8a5a00">⚠ 检测到结果持仓高度雷同'
+                    '<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:6px;'
+                    'padding:8px 10px;font-size:12px;color:var(--warn-fg)">⚠ 检测到结果持仓高度雷同'
                     "(前十大重叠 ≥70%)：110011 与 005827 可一键去重(默认开启)</div>",
                     unsafe_allow_html=True,
                 )

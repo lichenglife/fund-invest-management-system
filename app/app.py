@@ -30,8 +30,8 @@ def render_topbar() -> None:
         st.markdown(
             '<div style="display:flex;align-items:center;gap:10px">'
             '<span style="font-size:1.6rem">📈</span>'
-            '<span style="font-size:1.3rem;font-weight:800;color:#0A6B4A">FundLens</span>'
-            '<span style="color:#6B7280;font-size:0.95rem">· 基金学习利器</span>'
+            '<span style="font-size:1.3rem;font-weight:800;color:var(--brand-deep)">FundLens</span>'
+            '<span style="color:var(--text-muted);font-size:0.95rem">· 基金学习利器</span>'
             "</div>",
             unsafe_allow_html=True,
         )

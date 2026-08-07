@@ -55,6 +55,11 @@
 - P0-05 鉴权骨架（AES-256 + AES 令牌，`b913d85`）
 - P0-04 SQLAlchemy 模型 + Alembic 迁移（10 核心表，`d5cab55`）
 - P0-03/06/07 工程骨架（仓库/compose/CI/信封/日志/Streamlit 壳，`0db5a1e`）
+- **CR-20260806-01**（前端生产级改造评估，C2，**Approved（2026-08-06）**）：依《需求变更管理规范》对 `feat/frontend-ui` 前端做八维（颜色/组件/样式/大小/部署/联动/审美/合理性）评估，新增 `13-需求变更管理规范/cr/` 目录并落盘 CR + 影响分析 + 重新设计与改造方案三件。核心发现：涨跌配色语义自相矛盾（`utils.pct_color` 红涨绿跌 vs 令牌翠绿=正）、令牌未单一源落地（13 处裸 `#6B7280` + 游离色 `#fdeeee/#f0d39a/#8a5a00`）、无响应式/可访问性基线、全站仍走 Mock 未联调。不触动 DB / 接口契约 / E1–E14 口径。详见 `13-需求变更管理规范/cr/CR-20260806-01_*.md`。
+- **CR-20260806-01 实现(令牌 v2 地基)**：落地红涨绿跌语义——`style.css` 重定义为令牌 v2 单一源（新增涨跌语义色 `--color-gain` 红 / `--color-loss` 绿 + 间距/字号阶梯/阴影层级/焦点环令牌 + 响应式 `@media` 断点 + 可访问性 AA 基线）；`utils.pct_color` 与 `components/kpi_card` 单向对齐令牌；品牌翠绿降级为纯标识色，禁用于涨跌数值。不触动 DB/接口契约/E1–E14。分支 `feature/cr-20260806-01-frontend-overhaul`；新增 `tests/test_frontend_tokens.py` 锁死语义一致性。
+- **CR-20260806-01 实现(#8 逐页/组件着色收敛)**：消除全部游离硬色码（04 筛选器 `#f0d39a/#8a5a00`、03 详情 `#eef9f3/#fff8ec/#fdeeee` 等），统一引用 `style.css` 令牌 v2；`score_panel` 复合分改走 `LEVEL_COLOR` 状态色（与红涨绿跌绝缘）；`05_模拟交易` 持仓市值改 `COLOR_GREEN_D` 品牌标识色；新增令牌 `--warn-border/--brand-border/--surface-2/--neutral-bg`；扩展 `tests/test_frontend_tokens.py` 至 6 项（含 `test_no_inline_hex_outside_utils` 锁死游离色）并全绿；`style_box`/`ui`/`app.py`/`09舆情`/`13后台` 等组件与页面完成令牌替换，`py_compile` 全绿。
+- **CR-20260806-01 实现(#9 响应式移动优先与可访问性逐页落地)**：新增视口桥 `ui.inject_responsive_bridge()`（将 `<html data-fl-view>` 置为 sm/md/lg，纯 CSS 响应式，免 Python 感知屏宽）；新增 `ui.kpi_grid()` 响应式网格（auto-fit，替代 `st.columns(N)`+`kpi_card` 循环，宽屏多列/平板 2 列/手机单列）；`style.css` 新增 `.fl-grid` + `[data-fl-view="sm"]` 手机端将全部 `st.columns` 堆叠为单列 + `#main-content` 焦点清理；`page_header` 每页注入「跳到主内容」跳转链接与 `#main-content` 无障碍地标（AA 焦点环/减弱动效/屏幕阅读器专用已就绪）；01 仪表盘、13 后台管理 KPI 行改 `kpi_grid`；`kpi_card` 抽离 `kpi_card_html` 供网格拼接；`tests/test_frontend_tokens.py` 扩至 10 项（a11y 跳转链接/焦点环、响应式网格/视口桥断言）全绿。其余页面列布局由全局 `sm` 堆叠规则统一覆盖移动端。
+- **CR-20260806-01 关闭（2026-08-07）**：实现范围（令牌 v2 / 配色收敛 #8 / 响应式+a11y #9）已交付并合入 `feature/cr-20260806-01-frontend-overhaul`（commit `7dee044`）；CR 状态置 **Closed**。部署交付口径 + 前后端联调依《需求变更管理规范》§7 部分落地登记 **DEFERRED D11** 跟踪，不静默丢弃；CI 门禁依用户决策不纳入本 CR（前端令牌一致性测试 `tests/test_frontend_tokens.py` 10/10 已随提交合入）。
 
 ### Fixed
 - review 修复 /score 恒 None + attribution 误导 0 + 闰年崩溃（`4cfe299`）

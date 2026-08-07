@@ -15,11 +15,11 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from app import api_client, state, utils  # noqa: E402
-from app.components.kpi_card import kpi_card  # noqa: E402
 from app.components.ranking_table import ranking_table  # noqa: E402
 from app.components.ui import (  # noqa: E402
     fold,
     inject_global_style,
+    kpi_grid,
     metric_row,
     page_header,
     source_footer,
@@ -34,23 +34,23 @@ if api_client.is_mock():
     warning_banner("当前为示例数据 · 对应后端接口待实现（开发计划 P1/P2/P3）", key="mock", icon="🏗️")
 
 # --- 状态区(FR-D1/D5) ---
-# 1) 两张 KPI 卡：组合收益 vs 沪深300，正翠绿/负红(金融语义)，st.columns(2) 等宽统一 gap
+# 1) 两张 KPI 卡：组合收益 vs 沪深300，正红/负绿(红涨绿跌)，响应式网格(auto-fit)回流
 kpis = store.DASHBOARD_KPIS
-kc1, kc2 = st.columns(2)
-for col, k in zip((kc1, kc2), kpis, strict=False):
-    with col:
-        rp = k["return_pct"]
-        # delta 传超额收益文本(组合卡显示相对基准超额，基准卡无)
-        delta_str = None
-        if k.get("delta") is not None:
-            delta_str = utils.pct_text(k["delta"])
-        kpi_card(
-            label=k["label"],
-            value=utils.pct_text(rp),
-            period=k.get("period"),
-            delta=delta_str,
-            is_positive=rp >= 0,
-        )
+kpi_cards = []
+for k in kpis:
+    rp = k["return_pct"]
+    # delta 传超额收益文本(组合卡显示相对基准超额，基准卡无)
+    delta_str = utils.pct_text(k["delta"]) if k.get("delta") is not None else None
+    kpi_cards.append(
+        {
+            "label": k["label"],
+            "value": utils.pct_text(rp),
+            "period": k.get("period"),
+            "delta": delta_str,
+            "is_positive": rp >= 0,
+        }
+    )
+kpi_grid(kpi_cards)
 # 2) 次要状态卡(待办/学习进度)
 data = api_client.get_dashboard()
 metric_row(store.DASHBOARD_STATUS)

@@ -11,7 +11,7 @@ from typing import Any
 
 import streamlit as st
 
-from app.utils import LEVEL_COLOR, level_emoji, level_row, tooltip
+from app.utils import level_emoji, level_row, tooltip
 
 #: level -> 中文标签(原型 .pill ok/warn/bad)。
 LEVEL_LABEL = {
@@ -29,9 +29,9 @@ def metric_card(label: str, value: str, color: str | None = None) -> None:
     """指标卡(原型 .card；k/v 结构，带颜色)。色值对齐 static/style.css 令牌。"""
     if color:
         st.markdown(
-            f'<div style="border:1px solid #E5E7EB;border-radius:12px;padding:12px;'
+            f'<div style="border:1px solid var(--card-border);border-radius:12px;padding:12px;'
             f'box-shadow:0 1px 3px rgba(0,0,0,0.08)">'
-            f'<div style="color:#6B7280;font-size:12px">{label}</div>'
+            f'<div style="color:var(--text-muted);font-size:12px">{label}</div>'
             f'<div style="font-size:22px;font-weight:700;margin-top:4px;color:{color}">{value}</div>'
             f"</div>",
             unsafe_allow_html=True,
@@ -56,7 +56,7 @@ def panel(title: str, tag: str | None = None, border: bool = True) -> Any:
     if title:
         hdr = f"**{title}**"
         if tag:
-            hdr += f" <small style='color:#6B7280'>· {tag}</small>"
+            hdr += f" <small style='color:var(--text-muted)'>· {tag}</small>"
         st.markdown(hdr, unsafe_allow_html=True)
     return st.container(border=border)
 
@@ -65,18 +65,27 @@ def status_pill(level: str, text: str | None = None) -> str:
     """状态药丸(原型 .pill)：返回带背景色的内联 markdown。
 
     色值对齐 static/style.css 令牌：good 用浅绿底品牌绿字、warn 浅黄、bad 浅红。
-    红(#FDE8E8)仅用于 bad 风险药丸，不用于 active/selected。
+    红(var(--danger))仅用于 bad 风险药丸，不用于 active/selected；全部走 CSS 变量
+    单一权威源(令牌 v2 / CR-20260806-01)。
     """
-    color = LEVEL_COLOR.get(level, "#6B7280")
+    color = {
+        "good": "var(--brand)",
+        "ok": "var(--brand)",
+        "g": "var(--brand)",
+        "warn": "var(--warn-fg)",
+        "y": "var(--warn-fg)",
+        "bad": "var(--danger)",
+        "r": "var(--danger)",
+    }.get(level, "var(--text-muted)")
     bg = {
-        "good": "#F0FDF4",
-        "ok": "#F0FDF4",
-        "warn": "#FEF9C3",
-        "bad": "#FDE8E8",
-        "g": "#F0FDF4",
-        "y": "#FEF9C3",
-        "r": "#FDE8E8",
-    }.get(level, "#F3F4F6")
+        "good": "var(--brand-bg)",
+        "ok": "var(--brand-bg)",
+        "warn": "var(--warn-bg)",
+        "bad": "var(--danger-bg)",
+        "g": "var(--brand-bg)",
+        "y": "var(--warn-bg)",
+        "r": "var(--danger-bg)",
+    }.get(level, "var(--neutral-bg)")
     label = text or LEVEL_LABEL.get(level, level)
     return (
         f'<span style="background:{bg};color:{color};padding:2px 8px;'
@@ -160,15 +169,70 @@ def inject_global_style() -> None:
     active 品牌绿高亮(禁用红色作选中态)。
     """
     st.markdown(f"<style>{_load_css()}</style>", unsafe_allow_html=True)
+    inject_responsive_bridge()
+
+
+def inject_responsive_bridge() -> None:
+    """视口桥(令牌 v2 · CR-20260806-01 移动优先)。
+
+    将当前视口宽度写入 ``<html data-fl-view>``(sm/md/lg)，驱动纯 CSS 响应式，
+    无需在 Python 侧感知屏幕宽度。配合 style.css 的 ``[data-fl-view]`` 规则，
+    手机端(≤640)自动将 st.columns 堆叠为单列、平板(≤900)收紧间距。
+    """
+    st.markdown(
+        "<script>"
+        "(function(){"
+        "function apply(){"
+        "var w=window.innerWidth||document.documentElement.clientWidth||1280;"
+        "var v=w<=640?'sm':(w<=900?'md':'lg');"
+        "document.documentElement.setAttribute('data-fl-view',v);"
+        "}"
+        "apply();"
+        "window.addEventListener('resize',apply);"
+        "window.addEventListener('orientationchange',apply);"
+        "})();"
+        "</script>",
+        unsafe_allow_html=True,
+    )
+
+
+def kpi_grid(cards: list[dict[str, Any]], min_col_width: int = 200) -> None:
+    """响应式 KPI 卡网格(令牌 v2 · CR-20260806-01 移动优先)。
+
+    替代 ``st.columns(N)`` + ``kpi_card`` 循环：卡片按容器宽度自动回流(auto-fit)，
+    宽屏多列 / 平板 2 列 / 手机单列，无需手写断点。``cards`` 每项即 kpi_card 入参
+    ``{label, value, period?, delta?, is_positive?}``。
+    """
+    if not cards:
+        return
+    from app.components.kpi_card import kpi_card_html
+
+    items = "".join(
+        kpi_card_html(
+            label=c.get("label", ""),
+            value=str(c.get("value", "-")),
+            period=c.get("period"),
+            delta=c.get("delta"),
+            is_positive=bool(c.get("is_positive", True)),
+        )
+        for c in cards
+    )
+    st.markdown(
+        f'<div class="fl-grid" style="--fl-min:{min_col_width}px">{items}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def page_header(title: str, subtitle: str = "") -> None:
     """页面统一表头(原型§2 顶部信息架构)：翠绿色带 + 标题 + 副标题。
 
     替代裸 st.title，增强视觉层次与品牌一致性。各页顶部调用。
+    同时注入「跳到主内容」跳转链接与 ``#main-content`` 无障碍地标(CR-20260806-01 A11y)。
     """
     sub_html = f'<div class="fl-sub">{subtitle}</div>' if subtitle else ""
     st.markdown(
+        '<a class="fl-skip-link" href="#main-content">跳到主内容</a>'
+        '<div id="main-content" tabindex="-1" role="main"></div>'
         f'<div class="fl-page-header"><div class="fl-title">{title}</div>{sub_html}</div>',
         unsafe_allow_html=True,
     )
@@ -194,5 +258,7 @@ __all__ = [
     "tooltip",
     "level_emoji",
     "inject_global_style",
+    "inject_responsive_bridge",
+    "kpi_grid",
     "page_header",
 ]
